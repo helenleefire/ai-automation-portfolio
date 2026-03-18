@@ -1,8 +1,3 @@
-# day 2 - build a summarizer agent with pydantic structured output
-# define output schema
-# build agent
-# test
-# push
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
