@@ -20,9 +20,3 @@ agent = create_agent(
   system_prompt="Return a structured and concise summary",
   response_format= Summarize
 )
-
-result = agent.invoke({
-  "messages" : [{"role": "user", "content":"Summarize this article: https://docs.langchain.com/oss/python/langchain/philosophy"}]
-})
-
-print(result["structured_response"])
