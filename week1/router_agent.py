@@ -9,6 +9,7 @@ load_dotenv()
 
 os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
 
+# create tool to be used by agent that will classify tickets to different categories
 @tool
 def classify_ticket(message: str) -> str:
   """ Create a ticket according to the messages submitted and classify the ticket into three categories of
@@ -16,13 +17,53 @@ def classify_ticket(message: str) -> str:
 
   return f"Classifying ${message}"
 
-
+# define/initiate a chat model using claude sonnet
 model = init_chat_model("claude-sonnet-4-6")
+
+# define checkpointer to add short term memory to agent
 checkpointer = InMemorySaver()
 
+# define agent to call
 agent = create_agent(
   model = model,
   tools = [classify_ticket],
   system_prompt= """Respond appropriately to the concerns""",
   checkpointer=checkpointer
 )
+
+ticket = {
+  "content" : "My invoice shows the wrong amount"
+}
+
+result = agent.invoke(
+  {"messages": [{"role":"user",
+                 "content":f"{ticket["content"]}"}]},
+  {"configurable":{"thread_id":"1"}}
+)
+
+print(result["messages"][-1].content)
+
+ticket2 = {
+  "content" : "Can you tell me more about what I just asked?"
+}
+
+result2 = agent.invoke(
+  {"messages": [{"role":"user",
+                 "content":f"{ticket2["content"]}"}]},
+  {"configurable":{"thread_id":"1"}}
+)
+
+print(result2["messages"][-1].content)
+
+
+ticket3 = {
+  "content" : "How long should I wait for a response??"
+}
+
+result3 = agent.invoke(
+  {"messages": [{"role":"user",
+                 "content":f"{ticket3["content"]}"}]},
+  {"configurable":{"thread_id":"1"}}
+)
+
+print(result3["messages"][-1].content)
