@@ -7,38 +7,26 @@ from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langgraph.checkpoint.memory import InMemorySaver
 
-"""
-To do
 
-This is the core build of the week.
-Wrap your Chroma retriever as a @tool, pass it to create_agent.
-Ask 5 questions over your document.
-Observe when the agent uses the tool vs answers from training.
-The tool docstring is critical —
-the agent reads it to decide when to retrieve.
-
-What to test
-Ask 5 questions over your document — mix these types:
-
-A question clearly answered in the document
-A question partially answered in the document
-A question not in the document at all
-An ambiguous question that could go either way
-A follow-up to one of the above
-
-"""
 load_dotenv()
 
 os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
+os.environ["USER_AGENT"] = "my-app/1.0"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-model = init_chat_model("claude-sonnet-4-6")
-
-url = ["https://www.google.com"]
+url = [
+  "https://docs.oracle.com/javase/8/docs/api/java/util/HashMap.html",
+  "https://docs.oracle.com/javase/8/docs/api/java/util/ArrayList.html",
+  "https://docs.oracle.com/javase/8/docs/api/java/util/Hashtable.html"
+  ]
 web_data = WebBaseLoader(url).load()
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+
 document_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
 data = document_splitter.split_documents(web_data)
+
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
 
 vectorstore = Chroma (
   collection_name="my_collection",
@@ -50,21 +38,39 @@ vectorstore.add_documents(data)
 
 @tool
 def data_retriever(query: str) -> str:
-  """Reterieves relevent informtaion from the web document to answer questions"""
-  results = vectorstore.similarity_search(query)
-  if not results :
+  """Reterieve relevent informtaion from existing documents to answer questions.
+  Let the user know when using them."""
+  search = vectorstore.similarity_search(query)
+  response = ""
+  if not search :
     return "I don't see relevant information in my knowledge base"
-  return "\n".join([doc.page_content for doc in results])
+  return response.join("\n".join([doc.page_content for doc in search]))
 
+model = init_chat_model("claude-sonnet-4-6")
+
+checkpointer = InMemorySaver()
+
+config = {"configurable": {"thread_id": "rag-session-1"}}
 
 agent = create_agent(
   model=model,
   tools=[data_retriever],
-  system_prompt="""Use the data retrieval tool when answering questions"""
+  checkpointer=checkpointer,
+  system_prompt="""Use the data retrieval tool when answering questions.
+  Keep the response to at most a paragraph unless user asks for more detail"""
 )
 
-result = agent.invoke(
-  {"messages": [{"role": "user", "content": "why is the color orange called orange"}]}
+query1 = "What is a hashmap"
+result1 = agent.invoke(
+  {"messages": [{"role": "user", "content": query1}]},
+  config=config
 )
+print(result1["messages"][-1].content)
 
-print(result)
+
+query2 = "tell me more"
+result2 = agent.invoke(
+  {"messages": [{"role": "user", "content": query2}]},
+  config=config
+)
+print(result2["messages"][-1].content)
