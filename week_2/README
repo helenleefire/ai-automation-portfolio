@@ -1,9 +1,14 @@
-What it does — one paragraph describing the pipeline end to end. Document loader → chunks → embeddings → vector store → retriever tool → agent with memory.
+What the agent does:
+I created an agent that answers technical questions asked by an user. User can can expect the agent to answer follow up questions as it will remember what was previously asked and said until the conversation is terminated.
 
-To do: explain pipeline and how everything works. Make the agent file executable
+Description of agent pipeline:
+Document loader allows you to read data from different sources and into document that ensures that data is handled consistently. In our case, this is handled using WebBaseLoader. These documents are then cut to chunks to fit within model context window limit and be retreivable. Documents are vectorized or encoded through embedding to capture the semantic meaning of words and the machine is able to compare and search texts based on meaning rather than exact words. These embeded data are then stored in vector store and similiarity search is done to query for documents that are semantically similar to documents. Short term memory is saved to the agent in checkpointer which in our case is specified as using InMemorySaver.
 
 Sources of documents fed:
-I used documents from Oracle's Java documentation.
+I used documents from Oracle's Java documentation web page.
 
-If you ask a question about a word similar to one of the documents that is not related, it may mistake you as asking about a topic close to a document topic that exists. (i.e. asking about hash tag it thinks you're asking about hash map and says not to mistake with social media hash tag and continues talking about hashtag)
+Failure noticed:
+Agent may mistaken a question topic as being related to a document it is able to reference if the subject of a question is similar to a topic of a document it can reference in name (i.e. asking about hash tags may lead to the agent answering the question with topic of hashing instead and it will tell the user to not mistake it as the actual topic that was asked about).
+
+To run, execute the file in order of document_loader, agent_cli.
 
