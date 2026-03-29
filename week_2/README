@@ -1,0 +1,9 @@
+What it does — one paragraph describing the pipeline end to end. Document loader → chunks → embeddings → vector store → retriever tool → agent with memory.
+
+To do: explain pipeline and how everything works. Make the agent file executable
+
+Sources of documents fed:
+I used documents from Oracle's Java documentation.
+
+If you ask a question about a word similar to one of the documents that is not related, it may mistake you as asking about a topic close to a document topic that exists. (i.e. asking about hash tag it thinks you're asking about hash map and says not to mistake with social media hash tag and continues talking about hashtag)
+

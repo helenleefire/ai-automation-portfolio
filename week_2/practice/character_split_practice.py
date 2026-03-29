@@ -5,7 +5,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 
 
-loader = Docx2txtLoader("week_2/sample_data/ipsum.docx")
+loader = Docx2txtLoader("week_2/practice/sample_data/ipsum.docx")
 data = loader.load()
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
