@@ -1,0 +1,6 @@
+
+Zero Shot - responses from agent was not as structured
+CoT - responses were more structured with summaries and categorization and you can kind of see how tickets were categorized, created and updated
+Few Shot - responses were more uniform
+
+The output themselves made sense all of the time but with each addition you can see that the responses would improve
