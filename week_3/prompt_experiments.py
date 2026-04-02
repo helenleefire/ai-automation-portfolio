@@ -15,11 +15,14 @@ os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
 class SupportTicket(BaseModel) :
   category: str = Field("One of: billing, techcnial, general")
   summary: str = Field("The summary of issue in one to three sentences")
-  chat_history: list[list[str]] = [["User Input: Input", "Agent Response: Responsemy"]]
+  chat_history: list[ChatHistory] 
   priority: str = Field("One of: low, medium, high, urgent")
 
-
+class ChatHistory(BaseModel) :
+  user_input: str = Field("Input from user")
+  agent_response: str = Field("Full response given to user")
 # create tool to be used by agent that will classify tickets to different categories
+
 @tool
 def classify_ticket(message: str) -> str:
   """ Create a ticket according to the messages submitted and classify the ticket into three categories of
@@ -83,7 +86,6 @@ prompt = """
 agent = create_agent(
   model = model,
   tools = [classify_ticket],
-  response_format=ToolStrategy(SupportTicket),
   system_prompt= prompt,
   checkpointer=checkpointer
 )
@@ -101,5 +103,11 @@ if __name__ == "__main__" :
         {"messages": [{"role": "user", "content": question}]},
         config=config,
     )
+    conversation = "\n".join(                                                                                             
+        f"{m.type}: {m.content}"                                                                                          
+        for m in result['messages']                                                                                       
+    )               
+    ticket = model.with_structured_output(SupportTicket).invoke(conversation)
 
     print(f"\nAgent: {result['messages'][-1].content}. \nType done to exit.")
+    print(f"\nUpdate: {ticket}")
