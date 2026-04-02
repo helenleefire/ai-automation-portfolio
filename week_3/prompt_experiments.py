@@ -4,10 +4,20 @@ from langchain.chat_models import init_chat_model
 from langchain.tools import tool
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
+from pydantic import BaseModel, Field
+from langchain.agents.structured_output import ToolStrategy
 
 load_dotenv()
 
 os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
+
+# class for structured output for tickets
+class SupportTicket(BaseModel) :
+  category: str = Field("One of: billing, techcnial, general")
+  summary: str = Field("The summary of issue in one to three sentences")
+  chat_history: list[list[str]] = [["User Input: Input", "Agent Response: Responsemy"]]
+  priority: str = Field("One of: low, medium, high, urgent")
+
 
 # create tool to be used by agent that will classify tickets to different categories
 @tool
@@ -73,6 +83,7 @@ prompt = """
 agent = create_agent(
   model = model,
   tools = [classify_ticket],
+  response_format=ToolStrategy(SupportTicket),
   system_prompt= prompt,
   checkpointer=checkpointer
 )
