@@ -5,24 +5,31 @@ from langchain.tools import tool
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from pydantic import BaseModel, Field
-from langchain.agents.structured_output import ToolStrategy
 
 load_dotenv()
 
 os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
 
-# class for structured output for tickets
-class SupportTicket(BaseModel) :
-  category: str = Field("One of: billing, techcnial, general")
-  summary: str = Field("The summary of issue in one to three sentences")
-  chat_history: list[ChatHistory] 
-  priority: str = Field("One of: low, medium, high, urgent")
+# User database
+USER_DB = {
+  "1" :{"name": "Sarah Johnson", "employee_status": "Full Time", "department": "HR", "flag": "Suspicious"},
+  "2" :{"name": "Joseph Adams", "employee_status": "Part Time", "department": "IT", "flag": None},
+  "3" :{"name": "Alex Jones", "employee_status": "Retiree", "department": "Finance", "flag": "Prioritize"},
+  "4" :{"name": "Samantha Button", "employee_status": "Past Employee", "department": "Engineering", "flag": None},
+}
 
 class ChatHistory(BaseModel) :
   user_input: str = Field("Input from user")
   agent_response: str = Field("Full response given to user")
-# create tool to be used by agent that will classify tickets to different categories
 
+# class for structured output for tickets
+class SupportTicket(BaseModel) :
+  category: str = Field("One of: billing, technical, general")
+  summary: str = Field("The summary of issue in one to three sentences")
+  chat_history: list[ChatHistory] 
+  priority: str = Field("One of: low, medium, high, urgent")
+  
+# create tool to be used by agent that will classify tickets to different categories
 @tool
 def classify_ticket(message: str) -> str:
   """ Create a ticket according to the messages submitted and classify the ticket into three categories of
@@ -31,6 +38,19 @@ def classify_ticket(message: str) -> str:
 
   return f"Here is the summary of the ticket created: ${message}"
 
+@tool
+def lookup_user(user_id: str) -> str:
+  """Look up user information using their user ID. Give appropriate response according to user information.
+  If user information cannot be found or information is insufficient, be conservative with your response and don't overpromise"""
+  user = USER_DB.get(user_id)
+  if not user :
+    return f"User id of ${user_id} not found in database"
+  return (
+    f"Name: {user['name']} "
+    f"Employee Status: {user['employee_status']}"
+    f"Department: {user['department']}"
+    f"Flag: {user['flag']}"
+  )
 # define/initiate a chat model using claude sonnet
 model = init_chat_model("claude-sonnet-4-6")
 
@@ -85,22 +105,23 @@ prompt = """
 # define agent to call
 agent = create_agent(
   model = model,
-  tools = [classify_ticket],
+  tools = [classify_ticket, lookup_user],
   system_prompt= prompt,
   checkpointer=checkpointer
 )
 
 
-if __name__ == "__main__" :
-  print ("Is there a problem I can assist with? \n")
-
+if __name__ == "__main__" :  
   config = {"configurable": {"thread_id": "rag-session-1"}}
+  employeeId = input("Please provide your employee ID so I can provide better help.\n").strip()
+  print("What can I help you with?\n")
   while True :
     question = input ("Your input: ").strip()
     if question.lower() == "done" :
       break
+
     result = agent.invoke(
-        {"messages": [{"role": "user", "content": question}]},
+        {"messages": [{"role": "user", "content": f"[User ID: {employeeId}] {question}"}]},
         config=config,
     )
     conversation = "\n".join(                                                                                             
