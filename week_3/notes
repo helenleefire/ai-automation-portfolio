@@ -1,6 +1,22 @@
+Techniques Used for Better Results:
 
-Zero Shot - responses from agent was not as structured
-CoT - responses were more structured with summaries and categorization and you can kind of see how tickets were categorized, created and updated
-Few Shot - responses were more uniform
+Chain Of Thought
+- When to use: Complex classification, multi-step reasoning
+- Improvements: How the agent reasoned in making decisions would show in the response
+- Tips: Think about how you would make decisions or how you want the agent to make decisions
 
-The output themselves made sense all of the time but with each addition you can see that the responses would improve
+Few-shot
+- When to use: You need consistent tone and response
+- Improvements: Responses became more uniform and I was able to shape the responses and behaviors in ways I wanted
+- Tips: If there are behaviors you especially don't like from your agent, you can shape them by giving them how to respond via few-shot examples
+I was able to have the agent reference previous queries in newly created tickets using this ticket.
+
+Structured Outputs
+- When to use: Output needs to be easily parsable and uniform
+- Improvements: I was able to create tickets using same formats everytime which would be easily parasable down stream 
+- Tips: Creating classes for structure within class can be useful and allow even more uniformity and constraints
+
+Tools:
+- When to use: Agent needs data before answering, You need to extend what agent can/will do
+- Improvements: I was able to get the agent to reference a database for more tailored responses
+- Tips: Telling agent how to use the tool with descriptions can better shape the outcome

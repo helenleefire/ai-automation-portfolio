@@ -10,7 +10,7 @@ load_dotenv()
 
 os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
 
-# User database
+# Mock up user database
 USER_DB = {
   "1" :{"name": "Sarah Johnson", "employee_status": "Full Time", "department": "HR", "flag": "Suspicious"},
   "2" :{"name": "Joseph Adams", "employee_status": "Part Time", "department": "IT", "flag": None},
@@ -24,12 +24,13 @@ class ChatHistory(BaseModel) :
 
 # class for structured output for tickets
 class SupportTicket(BaseModel) :
+  title: str = Field("Concise title of the issue")
   category: str = Field("One of: billing, technical, general")
   summary: str = Field("The summary of issue in one to three sentences")
   chat_history: list[ChatHistory] 
   priority: str = Field("One of: low, medium, high, urgent")
   
-# create tool to be used by agent that will classify tickets to different categories
+# tool to be used by agent that will classify tickets to different categories
 @tool
 def classify_ticket(message: str) -> str:
   """ Create a ticket according to the messages submitted and classify the ticket into three categories of
@@ -38,6 +39,7 @@ def classify_ticket(message: str) -> str:
 
   return f"Here is the summary of the ticket created: ${message}"
 
+# tool help create more tailored responses and tickets and allow better prioritzation
 @tool
 def lookup_user(user_id: str) -> str:
   """Look up user information using their user ID. Give appropriate response according to user information.
@@ -87,7 +89,7 @@ prompt = """
         **Note** A new ticket has been created but issues will be linked so both can be received together as back pay.
       </output>
     </scenario_2>
-  </examples>
+  </examples> 
   <ticket_format>
     Title: [concise title here]
     Category: [billing | technical | general]
@@ -95,8 +97,11 @@ prompt = """
     Full Conversation: [full conversation thread]
   </ticket_format>
   <instructions>
-    Create a separate ticket for each distinct issue rather than combining them
-    and keep the title descriptive but concise.
+    If the user has a "Suspicious" flag, be conservative and do not make promises.
+    If the user has a "Prioritize" flag, escalate their ticket priority accordingly.                    
+    If the user is a "Past Employee", remind them that support may be limited.      
+    You can combine tickets if they are related but create a separate ticket for each distinct issues.
+    Keep the title descriptive but concise.
     You can add the conversation to relevant tickets in case human agents need further reference
     but you can expect them to rely mostly on the summary you will output.
   </instructions>
@@ -115,15 +120,19 @@ if __name__ == "__main__" :
   config = {"configurable": {"thread_id": "rag-session-1"}}
   employeeId = input("Please provide your employee ID so I can provide better help.\n").strip()
   print("What can I help you with?\n")
+  first_message = True
   while True :
     question = input ("Your input: ").strip()
     if question.lower() == "done" :
       break
 
+    content = f"[User ID: {employeeId}] {question}" if first_message else question
+    first_message = False
     result = agent.invoke(
-        {"messages": [{"role": "user", "content": f"[User ID: {employeeId}] {question}"}]},
+        {"messages": [{"role": "user", "content": content}]},
         config=config,
     )
+
     conversation = "\n".join(                                                                                             
         f"{m.type}: {m.content}"                                                                                          
         for m in result['messages']                                                                                       
