@@ -24,11 +24,11 @@ vectorstore = Chroma (
 )
 
 @tool
-def data_retriever(query: str) -> str:
+async def data_retriever(query: str) -> str:
   """Reterieve relevent informtaion from existing documents to answer questions.
   Let the user know when using them."""
   try :
-    search = vectorstore.similarity_search(query)
+    search = await vectorstore.asimilarity_search(query)
     if not search :
       return "I don't see relevant information in my knowledge base"
     return "\n".join([doc.page_content for doc in search])

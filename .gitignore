@@ -1,4 +1,5 @@
 .env
-.venv
+venv
 chroma_langchain_db
 .DS_Store
+__pycache__
