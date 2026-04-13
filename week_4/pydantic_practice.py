@@ -28,7 +28,7 @@ class SupportTicket(BaseModel):
 userInfo = UserDatabaseBaseAPI (
     success=True,
     user_id="kit_kat",
-    user_email="kitkat.com",
+    user_email="kitkat@gmail.com",
     status="Employee",
     prioritize=True
 )
