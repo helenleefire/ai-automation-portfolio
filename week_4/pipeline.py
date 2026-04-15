@@ -4,9 +4,11 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from anthropic import AsyncAnthropic, AsyncAPIResponse
+from anthropic import AsyncAnthropic
+import config
 
 load_dotenv()
+config
 
 client = AsyncAnthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 logging.basicConfig(filename='pipeline.log', level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
