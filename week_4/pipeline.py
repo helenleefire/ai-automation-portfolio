@@ -3,9 +3,9 @@ import asyncio
 import logging
 from pydantic import BaseModel, Field
 from anthropic import AsyncAnthropic
-import config
+from config import settings
 
-client = AsyncAnthropic(api_key=config.settings.anthropic_api)
+client = AsyncAnthropic(api_key=settings.anthropic_api)
 logging.basicConfig(filename='pipeline.log', level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -23,14 +23,14 @@ async def main() -> None:
         try:
             logger.info(f'Calling API, question asked: {question}')
             answer = await client.messages.create(
-                max_tokens=1000,
+                max_tokens=settings.max_tokens,
                 messages=[
                     {
                         "role":"user",
                         "content": question,
                     }
                 ],
-                model="claude-opus-4-6",
+                model=settings.model,
                 tools=[{
                     "name": "format_response",
                     "description": "Format the response",
