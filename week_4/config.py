@@ -10,6 +10,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+
 try :
     settings = Settings()
     print("env config validated")
