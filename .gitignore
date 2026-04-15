@@ -3,3 +3,4 @@ venv
 chroma_langchain_db
 .DS_Store
 __pycache__
+**log

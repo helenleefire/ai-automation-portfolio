@@ -4,13 +4,14 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, AsyncAPIResponse
 
 load_dotenv()
 
 client = AsyncAnthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
-logger = logging.getLogger(__name__)
 logging.basicConfig(filename='pipeline.log', level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
 class APIResponse(BaseModel) :
     title : str = Field(description="Title of response in a short sentence")
     summary : str = Field(description="Summary of the answer given to user in at most 3 sentences but shorter the better")
@@ -23,7 +24,7 @@ async def main() -> None:
         if question.lower() == "stop" :
             break
         try:
-            logger.info('Calling API')
+            logger.info(f'Calling API, question asked: {question}')
             answer = await client.messages.create(
                 max_tokens=1000,
                 messages=[
@@ -40,11 +41,15 @@ async def main() -> None:
                 }],
                 tool_choice={"type": "tool", "name": "format_response"}
             )
-            logger.info(f'Succes!')
-            print(f"\nAgent answer: {answer.content[0].input}\n")
+            logger.info(f'Success, input token used: {answer.usage.input_tokens} and output token used: {answer.usage.output_tokens}')
+            answerJSON = APIResponse(**answer.content[0].input)
+            print(f"\nAgent answer: Title: {answerJSON.title}\nSummary: {answerJSON.summary}\nFull Response: {answerJSON.answer}")
         except (anthropic.AuthenticationError, TypeError) as e :
             logger.error(f'Authentication failed\n {e}')
         except (anthropic.APIConnectionError, TypeError) as e:
-            logger.error(f'Server could not be reached\n {e}' )
+            logger.error(f'Server could not be reached\n {e}')
+        except (anthropic.RateLimitError, TypeError) as e :
+            logger.error(f'Rate limit error was encountered\n {e}')
         print("Enter stop to end")
+        
 asyncio.run(main())
