@@ -1,0 +1,5 @@
+My LlamaIndex Agent vs LangChain Agent
+
+Agent I built out of LlamaIndex has constraints on the questions it can't answer. The one I made out of LangChain will look through the documents it has and if the question is outside of scope of what is has access to, it will still give you answers, from outside the sources. LangChain will make decisions on whether it retrieve from its knowledge source while LlamaIndex will always reference it.
+
+With LlamaIndex,you set the vector store with the nodes as a query engine and simply use the query method to retrieve information. This way, the vector store will be the only source of information. With the LangChain Agent, retriever is wrapped as a tool and the agent will make decison on whether to retrieve data from the vector store. 
