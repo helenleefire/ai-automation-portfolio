@@ -6,22 +6,13 @@ from langchain.agents.factory import create_agent
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langgraph.checkpoint.memory import InMemorySaver
-
+from document_loader import vectorstore
 
 load_dotenv()
 
 os.environ["ANTHROPIC_API_KEY"] = os.getenv('ANTHROPIC_API_KEY')
 os.environ["USER_AGENT"] = "my-app/1.0"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
-
-vectorstore = Chroma (
-  collection_name="my_collection",
-  embedding_function=embeddings,
-  persist_directory="./chroma_langchain_db"
-)
 
 @tool
 async def data_retriever(query: str) -> str:
