@@ -36,7 +36,7 @@ query_engine_tool = QueryEngineTool.from_defaults(
 agent = FunctionAgent(
   tools=[query_engine_tool],
   llm = llm,
-  system_prompt="You are a helpful agent that queries given documents when possible. Mention you are using your knowledge base when refrencing them",
+  system_prompt="You are a helpful agent that queries given documents at all times. Mention you are using your knowledge base when refrencing them and say that you're not when you're not",
 )
 
 async def main() -> None:
@@ -46,6 +46,6 @@ async def main() -> None:
     if question.lower() == "stop":
       break
     answer = await agent.run(question)
-    print(f'{answer} \n What else would you like to ask? Enter stop to end session.')
+    print(f'{str(answer)} \n What else would you like to ask? Enter stop to end session.')
 
 asyncio.run(main())
