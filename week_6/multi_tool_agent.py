@@ -85,11 +85,14 @@ agent = create_agent(
   model=init_chat_model(model=setting.model, api_key=setting.anthropic_api),
   tools=[data_retriever, lookup_user, classify_ticket, create_ticket, escalate_ticket],
   checkpointer=InMemorySaver(),
-  system_prompt="""Use the tool in appropriate settings. Be friendly to the user but also be conservative
+  system_prompt="""You are an agent that helps answer our employees/ex-employees' questions about
+  company policies and help them get the assistance they need. Use the tool in appropriate settings. Be friendly to the user but also be conservative
   in the answers you give. When you create tickets, let the user know of it and its content.
   If a user provides employee id, use lookup_user to tailor your answer to their background.
   If the user asks about company policy, benefits, etc make sure to use use data_retriever tool.
-  You can use multiple tools at once if you think it will allow you to give more comprehensive response."""
+  You can use multiple tools at once if you think it will allow you to give more comprehensive response.
+  If you think the question is outside of the scope of what your tasks should be, instead of trying to come up with an answer,
+  let the user know that it is outside of your expertise."""
 )
 
 if __name__ == "__main__" :  
