@@ -8,11 +8,8 @@ from langchain.chat_models import init_chat_model
 from langchain.tools import tool
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from pydantic import BaseModel, Field
-
-
+from document_load import vectorstore
 client = Anthropic(api_key=setting.anthropic_api)
 
 # Mock up user database
@@ -22,7 +19,7 @@ USER_DB = {
   "3" :{"name": "Alex Jones", "employee_status": "Retiree", "department": "Finance", "flag": "Prioritize"},
   "4" :{"name": "Samantha Button", "employee_status": "Past Employee", "department": "Engineering", "flag": None},
 }
-
+   
 class ChatHistory(BaseModel) :
   user_input: str = Field("Input from user")
   agent_response: str = Field("Full response given to user")
@@ -33,12 +30,6 @@ class SupportTicket(BaseModel) :
   summary: str = Field("The summary of issue in one to three sentences")
   chat_history: list[ChatHistory] 
   priority: str = Field("One of: low, medium, high, urgent")
-
-vectorstore = Chroma (
-  collection_name="my_collection",
-  embedding_function= HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2"),
-  persist_directory="./chroma_langchain_db"
-)
 
 @tool
 def data_retriever(query: str) -> str:
@@ -94,10 +85,11 @@ agent = create_agent(
   model=init_chat_model(model=setting.model, api_key=setting.anthropic_api),
   tools=[data_retriever, lookup_user, classify_ticket, create_ticket, escalate_ticket],
   checkpointer=InMemorySaver(),
-  system_prompt="""Use the tool in appropriate settings. 
-  Don't shy away from using the tools as using them will help you provide support in
-  leadership approved ways. Be friendly to the customer but also be conservative
-  in the answers you give. When you create tickets, let the user know of it and its content."""
+  system_prompt="""Use the tool in appropriate settings. Be friendly to the user but also be conservative
+  in the answers you give. When you create tickets, let the user know of it and its content.
+  If a user provides employee id, use lookup_user to tailor your answer to their background.
+  If the user asks about company policy, benefits, etc make sure to use use data_retriever tool.
+  You can use multiple tools at once if you think it will allow you to give more comprehensive response."""
 )
 
 if __name__ == "__main__" :  
