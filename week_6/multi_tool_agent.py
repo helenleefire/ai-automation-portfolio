@@ -1,7 +1,3 @@
-# Define lookup_customer (mock DB from Week 3), 
-# search_knowledge_base (your Week 2 RAG retriever), 
-# and escalate_ticket (logs to file). Confirm each works independently. 
-# Write strong docstrings — the agent reads these to decide which tool to call.
 from config import setting
 from anthropic import Anthropic
 from langchain.chat_models import init_chat_model
@@ -43,9 +39,8 @@ def data_retriever(query: str) -> str:
         return "I'm sorry, I wasn't able to access my knowledge base"                                                  
 @tool
 def lookup_user(user_id: str) -> str:
-  """Look up user information using their user ID if you think your answer
-  would benefit from knowing the background of the user.
-  Give appropriate response according to user information.
+  """Look up user information using their user ID. This tool is to allow you to
+  tailor your response to employee information.
   If user information cannot be found or information is insufficient, 
   be conservative with your response and don't overpromise"""
   user = USER_DB.get(user_id)
@@ -89,6 +84,8 @@ agent = create_agent(
   company policies and help them get the assistance they need. Use the tool in appropriate settings. Be friendly to the user but also be conservative
   in the answers you give. When you create tickets, let the user know of it and its content.
   If a user provides employee id, use lookup_user to tailor your answer to their background.
+  Flags such as suspicious means you should give conservative responses and prioritize flag means you should
+  escalate created tickets sooner than other users.
   If the user asks about company policy, benefits, etc make sure to use use data_retriever tool.
   You can use multiple tools at once if you think it will allow you to give more comprehensive response.
   If you think the question is outside of the scope of what your tasks should be, instead of trying to come up with an answer,
@@ -110,11 +107,5 @@ if __name__ == "__main__" :
         {"messages": [{"role": "user", "content": content}]},
         config={"configurable": {"thread_id": "rag-session-1"}}
     )
-
-    conversation = "\n".join(                                                                                             
-        f"{m.type}: {m.content}"                                                                                          
-        for m in result['messages']                                                                                       
-    )               
-
 
     print(f"\nAgent: {result['messages'][-1].content}. \nType done to exit.")
