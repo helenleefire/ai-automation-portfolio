@@ -1,0 +1,23 @@
+import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, ValidationError
+
+_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.env")
+
+class Setting(BaseSettings):
+    anthropic_api: str = Field(..., alias="ANTHROPIC_API_KEY")
+    max_tokens: int = Field(...,alias="MAX_TOKENS")
+    model: str = Field(...,alias="ANTHROPIC_MODEL")
+    langsmith_api_key: str = Field(..., alias="LANGSMITH_API_KEY")
+    langsmith_tracing: str = Field("true", alias="LANGSMITH_TRACING")
+    langsmith_project: str = Field(..., alias="LANGSMITH_PROJECT")
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+try :
+    setting = Setting()
+    print("config validated")
+except ValidationError as e:
+    print(e)
