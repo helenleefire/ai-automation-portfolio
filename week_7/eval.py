@@ -1,4 +1,5 @@
 from multi_tool_agent import agent
+import time
 eval_set = [
     {
         "input": "[User ID: 3] What is my employment status?",
@@ -54,12 +55,14 @@ eval_set = [
 
 keyword_results = []
 tool_use_results = []
+tools_used = []
+
 for eval in eval_set:
     result = agent.invoke(
         {"messages": [{"role": "user", "content": eval["input"]}]},
         config={"configurable": {"thread_id": "rag-session-1"}}
     )
-    tools_used = [                                                                                    
+    eval_tools_used = [                                                                                    
         tc['name']  
         for msg in result['messages']
         if hasattr(msg, 'tool_calls')
@@ -73,13 +76,17 @@ for eval in eval_set:
             keywordFound += 1
     toolUsed = 0
     for tool in eval["expected_tools"]:
-        if tool in tools_used :
+        if tool in eval_tools_used :
             toolUsed += 1
-
     keyword_results.append(keywordFound/len(eval["expected_keywords"]))
     tool_use_results.append(toolUsed/len(eval["expected_tools"]))
+    tools_used.append(eval_tools_used)
 
 keyword_pass = sum(keyword_results) / len(keyword_results)
 tool_use_pass = sum(tool_use_results) / len(tool_use_results)
+print(keyword_results)
+print(tool_use_results)
+print(tools_used)
 print(f"keyword pass rate: {keyword_pass * 100}%")
 print(f"too use pass rate: {tool_use_pass * 100}%")
+
