@@ -1,0 +1,20 @@
+Day 1
+Design + scaffold script writing agent
+Plan architecture
+conversational flow for scene outline generation
+file ingestion for analysis tools. 
+
+Find a free screenplay online (SimplyScripts or IMSDB)
+    look up scripts of movies in the imdb top 250 movies list
+Build scene-based chunker splitting on INT. and EXT. headers. 
+Confirm chunking works before building anything on top.
+
+Day 2
+Build: generate_scene_outline + analyze_structure
+Build conversational generate_scene_outline tool first — 
+takes logline/premise from conversation, 
+returns structured act breakdown with scene beats. 
+
+Then add analyze_structure — 
+retrieves key structural moments from ingested script 
+and evaluates against three-act framework.

@@ -4,5 +4,5 @@ chroma_langchain_db
 .DS_Store
 __pycache__
 **log
-week_5/sample_data
-week_6/sample_data
+sample_data
+scripts
