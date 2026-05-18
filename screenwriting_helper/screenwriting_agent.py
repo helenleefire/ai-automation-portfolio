@@ -3,13 +3,13 @@ from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from setting import setting
-from agent_tools import data_retriever, generate_scene_outline, analyze_characters, analyze_structure
+from agent_tools import data_retriever, user_script_retreiver, generate_scene_outline, analyze_characters, analyze_structure
 from ingest_data import ingestData
 from pathlib import Path
 
 agent = create_agent(
     model=init_chat_model(model=setting.model, api_key=setting.anthropic_api),
-    tools=[data_retriever, generate_scene_outline, analyze_characters, analyze_structure],
+    tools=[data_retriever, generate_scene_outline, analyze_characters, analyze_structure, user_script_retreiver],
     checkpointer= InMemorySaver(),
     system_prompt="""You are a screenwriting helper agent. You help screenwriters polish
     their ideas and scripts as well as give suggestions for how to continue story, analyze
@@ -22,16 +22,34 @@ agent = create_agent(
 )
 
 if __name__ == "__main__":
-    file_path = input("""
-        Hello! I am a screenwriting assistant! \n
-          If you have a script you would like me to review, please provide its file path.\n
-          Type none if you don't have any scripts to provide. \n
-          Your input: 
-    """)
-    if file_path.strip() != "none":
-        asyncio.run(ingestData(True, Path(file_path)))
+    valid_file_path = False
+    script_provided = False
+    script_name = ""
+    while not valid_file_path:
+        file_path = input("""\nHello! I am a screenwriting assistant!\n
+If you have a script you would like me to review, please provide its file path.\n
+Type none if you don't have any scripts to provide. \n
+Your input: """)
+        if file_path.strip() != "none":
+            if asyncio.run(ingestData(True, Path(file_path))) == True:
+                valid_file_path = True
+                script_provided = True
+                script_name = Path(file_path).name
+        else:
+            valid_file_path = True
 
-    print("Tell me what you need help with today and we can start from there!")
+    if script_provided:
+        result = agent.invoke(
+            {"messages": [{"role": "user", 
+                           "content": f"I have uploaded my script '{script_name}' \
+                            for you to review. Use user_script_retreiver to access it\
+                                  whenever you need to reference or analyze it."}]},
+            config={"configurable": {"thread_id": "rag-session-1"}}
+        )
+        print(f"\nAgent: {result['messages'][-1].content}\nType stop to exit.")
+    else:
+        print("Tell me what you need help with today and we can start from there! Type stop to exit.")
+
     while True:
         query = input("Your input: ").strip()
         if query.lower() == "stop":

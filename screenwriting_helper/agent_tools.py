@@ -31,6 +31,21 @@ def data_retriever (query: str) -> str :
         return "\n".join([doc.page_content for doc in search])
     except:
         return "I'm unable to refer to my script knowledgebase"
+
+@tool 
+def user_script_retreiver (query: str) -> str :
+    """Use this tool to reference user scripts, to be able to give your analysis
+    and detailed advice that the user is looking for."""
+    try:
+        query_vector = embedding.embed_query(query)
+        search = user_store.max_marginal_relevance_search_by_vector(
+            k=5, fetch_k=20, embedding=query_vector)
+        if not search:
+            return "I don't think there is enough content in the script to provide help you may be looking for. " \
+            "Can you give me some details about the script you're trying to write?"
+        return "\n".join([doc.page_content for doc in search])
+    except:
+        return "I'm unable to access your script"
     
 @tool
 def analyze_structure(analysis: str) -> str:
