@@ -1,0 +1,17 @@
+research_task:
+  description: >
+    Conduct thorough research about {topic}. Use web search to find current,
+    credible information. The current year is 2026.
+  expected_output: >
+    A markdown report with clear sections: key trends, notable tools or companies,
+    and implications. Aim for 800–1200 words. No fenced code blocks around the whole document.
+  agent: researcher
+  output_file: output/report.md
+
+summarize_task:
+  description: >
+    Read the research that is provided thoroughly. Paraphrase in concise and easy to understand wording. 
+  expected_output: >
+    A summary with title, 2 to 5 keywords, 2 to 5 sentence summary of the research. 
+  agent: summarizer
+  output_file: output/summarize.md
