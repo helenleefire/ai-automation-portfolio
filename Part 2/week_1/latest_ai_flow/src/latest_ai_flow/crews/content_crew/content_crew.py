@@ -4,7 +4,14 @@ from crewai import Agent, Crew, LLM, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
+from pydantic import BaseModel, Field
 
+class Report(BaseModel):
+  topic: str = Field(description="The main topic of the research")
+  key_findings: List[str] = Field(description="The key findings found in research that user should focus on")
+  source: str = Field(description="The sources referenced in creating the report")
+  read_more: List[str] = Field(description="The list of web pages user can reference if they would like to learn more about specific key findings")
+  confidence: str = Field(description="One of three: high, medium, low")
 
 @CrewBase
 class ResearchCrew:
@@ -28,6 +35,7 @@ class ResearchCrew:
   @task
   def research_task(self) -> Task:
     return Task(
+      output_pydantic=Report,
       config=self.tasks_config["research_task"],  # type: ignore[index]
     )
   

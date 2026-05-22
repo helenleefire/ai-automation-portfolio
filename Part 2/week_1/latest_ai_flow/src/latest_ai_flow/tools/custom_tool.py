@@ -10,7 +10,6 @@ class MyCustomToolInput(BaseModel):
 
     argument: str = Field(..., description="Description of the argument.")
 
-
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
     description: str = "Clear description for what this tool is useful for, your agent will need this information to use it."
