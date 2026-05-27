@@ -1,0 +1,16 @@
+planning_task:
+  description: >
+    Create a detailed outline for a blog post about {topic}.
+
+    The outline should include:
+    - A compelling title
+    - An introduction hook
+    - 3-5 main sections with key points to cover in each
+    - A conclusion with a call to action
+
+    Make the outline detailed enough that a writer can produce
+    a full blog post from it without additional research.
+  expected_output: >
+    A structured blog post outline with a title, introduction notes,
+    detailed section breakdowns, and conclusion notes.
+  agent: planner

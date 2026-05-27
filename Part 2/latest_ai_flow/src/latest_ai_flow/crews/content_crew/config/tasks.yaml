@@ -1,0 +1,28 @@
+research_task:
+  description: >
+    Conduct thorough research about {topic}. Use web search to find current,
+    credible information. The current year is 2026. Take consideration of critiques from
+    critic and improve research based on it.
+  expected_output: >
+    A markdown report with clear sections: key trends, notable tools or companies,
+    and implications. Aim for 800–1200 words. No fenced code blocks around the whole document.
+  agent: researcher
+  output_file: output/report.md
+
+summarize_task:
+  description: >
+    Read the research that is provided thoroughly. Paraphrase in concise and easy to understand wording.
+    Consider critique from critic if available and improve summary as needed.
+  expected_output: >
+    A summary with title, 2 to 5 keywords, 2 to 5 sentence summary of the research. 
+  agent: summarizer
+  output_file: output/summarize.md
+
+critique_task:
+  description: >
+    Read the research that is provided thoroughly. Provide critiques of what can be imroved
+    and how it can be improved.
+  expected_output: >
+    Areas of improvement in report and how to improve them.
+  agent: critic
+  output_file: output/critique.md

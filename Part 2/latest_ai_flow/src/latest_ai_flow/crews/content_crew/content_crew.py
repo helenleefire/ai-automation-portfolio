@@ -38,7 +38,21 @@ class ResearchCrew:
       output_pydantic=Report,
       config=self.tasks_config["research_task"],  # type: ignore[index]
     )
-  
+
+  @agent
+  def critic(self)-> Agent:
+    return Agent(
+      config=self.agents_config["critic"], # type: ignore[index]
+      verbose=False,
+      llm=LLM(model="anthropic/claude-sonnet-4-6"),
+    )
+
+  @task
+  def critique_task(self) -> Task:
+    return Task(
+      config=self.tasks_config["critique_task"], # type: ignore[index]
+    )
+
   @agent
   def summarizer(self)-> Agent:
     return Agent(
@@ -57,7 +71,7 @@ class ResearchCrew:
   def crew(self) -> Crew:
     return Crew(
       agents=self.agents,
-      tasks=self.tasks,
+      tasks=[self.research_task(), self.critique_task(), self.research_task(), self.summarize_task()],
       process=Process.sequential,
       verbose=True,
     )
