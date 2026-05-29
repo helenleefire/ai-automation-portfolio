@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from pydantic import BaseModel
 
 from crewai.flow import Flow, listen, start

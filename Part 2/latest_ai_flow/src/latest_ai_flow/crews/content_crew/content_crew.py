@@ -4,6 +4,8 @@ from crewai import Agent, Crew, LLM, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
+from crewai.memory import Memory
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction                                                                                        
 from pydantic import BaseModel, Field
 
 class Report(BaseModel):
@@ -71,7 +73,13 @@ class ResearchCrew:
   def crew(self) -> Crew:
     return Crew(
       agents=self.agents,
-      tasks=[self.research_task(), self.critique_task(), self.research_task(), self.summarize_task()],
-      process=Process.sequential,
+      tasks=self.tasks,
+      manager_llm=LLM(model="anthropic/claude-sonnet-4-6"),
+      process=Process.hierarchical,
       verbose=True,
+      planning=False,   
+      memory=Memory(
+        llm="anthropic/claude-sonnet-4-6",
+        embedder=SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2"),
+      ),
     )
