@@ -1,16 +1,50 @@
-planning_task:
+transcription_task:
   description: >
-    Create a detailed outline for a blog post about {topic}.
+    Create a detailed transcription of video.
 
-    The outline should include:
-    - A compelling title
-    - An introduction hook
-    - 3-5 main sections with key points to cover in each
-    - A conclusion with a call to action
+    The transcription should include:
+    - who is speaking (if identifiable)
+    - description of a sound if noticeable
+    - dialogue
+    - timestamp of dialogue/sound
 
-    Make the outline detailed enough that a writer can produce
-    a full blog post from it without additional research.
+    Make the transcription detailed but don't include details
+    that will not be useful during the video cutting/editng phase.
   expected_output: >
-    A structured blog post outline with a title, introduction notes,
-    detailed section breakdowns, and conclusion notes.
-  agent: planner
+    A structured and well defined transcription of given video that 
+    will make it easy to decide the best moments to preserve in 
+    a final video.
+  agent: transcriber
+
+transcript_analysis_task:
+  description: >
+    Create a detailed analysis of a transcript of a video,
+
+    The analysis should include:
+    - theme of the video
+    - the main characters
+    - description of a key moment
+    - start/end time stamp of key moments occurred
+    - why the key moment is important to the video
+
+    Make the analysis as detailed as possible so in the downstream
+    and find as much key moments from the transcript. downstream
+    agents will be selective about which moments to put in the final videos.
+  expected_output: >
+    A structured report of the theme of the video, the main characters and
+    the key moments in the video with time stamps to support them. 
+  agent: transcript_analyst
+
+content_planning_task:
+  description: >
+    Create a plan with time stamps of the segments that will be included in the
+    final video. Take consideration of which part of the video will hook
+    the viewers the most and which style of editing would make sense 
+    for the platform the video will be uploaded. Fit the video within
+    the time limit of platform but don't try to make it as long as possible.
+    Goal of the video should be to be able to catch the attention of the
+    viewers for as long as possible so hititng the time limit will not always
+    be the best idea. 
+  expected_output: >
+    List of segments with timestamps that will be included in the final video.
+  agent: content_planner

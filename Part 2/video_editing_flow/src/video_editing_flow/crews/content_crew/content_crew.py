@@ -1,6 +1,7 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
+from tools.custom_tool import TranscriptionTool, TimeStamp
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -14,62 +15,53 @@ class ContentCrew:
     agents: list[BaseAgent]
     tasks: list[Task]
 
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
-    # If you would like to add tools to your crew, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
-    def planner(self) -> Agent:
+    def trasncriber(self) -> Agent:
         return Agent(
-            config=self.agents_config["planner"],  # type: ignore[index]
-        )
-
-    @agent
-    def writer(self) -> Agent:
-        return Agent(
-            config=self.agents_config["writer"],  # type: ignore[index]
-        )
-
-    @agent
-    def editor(self) -> Agent:
-        return Agent(
-            config=self.agents_config["editor"],  # type: ignore[index]
-        )
-
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
-    @task
-    def planning_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["planning_task"],  # type: ignore[index]
+            config=self.agents_config["transcriber"],  # type: ignore[index]
         )
 
     @task
-    def writing_task(self) -> Task:
+    def transcription_task(self) -> Task:
         return Task(
-            config=self.tasks_config["writing_task"],  # type: ignore[index]
+            tools=[TranscriptionTool],
+            config=self.tasks_config["transcription_task"],  # type: ignore[index]
         )
-
+    
+    @agent
+    def transcript_analyst(self) -> Agent:
+        return Agent(
+            config=self.agents_config["transcript_analyst"], # type: ignore[index]
+        )
+    
     @task
-    def editing_task(self) -> Task:
+    def transcript_analysis_task(self) -> Task:
         return Task(
-            config=self.tasks_config["editing_task"],  # type: ignore[index]
+            config= self.tasks_config["transcript_analysis_task"], # type: ignore[index]
         )
 
+    @agent
+    def content_planner(self) -> Agent:
+        return Agent(
+            config=self.agents_config["content_planner"], # type: ignore[index]
+        )
+    
+    @task
+    def content_planning_task(self) -> Task:
+        return Task(
+            config=self.tasks_config["content_planning_task"], # type: ignore[index]
+            output_pydantic=list[TimeStamp]
+        )
+    
     @crew
     def crew(self) -> Crew:
         """Creates the Content Crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
-
         return Crew(
-            agents=self.agents,  # Automatically created by the @agent decorator
-            tasks=self.tasks,  # Automatically created by the @task decorator
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
-            verbose=True,
+            verbose=False,
         )
