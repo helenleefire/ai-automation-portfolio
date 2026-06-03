@@ -1,7 +1,7 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
-from tools.custom_tool import TranscriptionTool, TimeStamp
+from tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoreingTool
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -53,7 +53,21 @@ class ContentCrew:
     def content_planning_task(self) -> Task:
         return Task(
             config=self.tasks_config["content_planning_task"], # type: ignore[index]
-            output_pydantic=list[TimeStamp]
+            output_pydantic=list[SceneChangeTimeStamp]
+        )
+    
+    @agent
+    def scene_scorer(self) -> Agent:
+        return Agent(
+            config=self.agents_config["scene_scorer"], # type: ignore[index]
+        )
+
+    @task
+    def scene_scoring_task(self) -> Task:
+        return Task(
+            config = self.tasks_config["scene_scoring_task"], # type: ignore[index]
+            tools = [SceneScoreingTool],
+            output_pydantic=list[FrameScore]
         )
     
     @crew

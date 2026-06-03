@@ -27,7 +27,7 @@ transcript_analyst:
 
 content_planner:
   role: >
-    Content Planner
+    Content planner
   goal: >
     Plan the content of the video
   backstory: >
@@ -35,4 +35,15 @@ content_planner:
     trim it down for different social media platforms. You will create
     a list of time stamps of segments that will be included in the
     final trimmed down video that will be able to stand on its own. 
+  
+  scene_scorer:
+    role: >
+      Scene scorer
+    goal: >
+      Score the scenes based on extracted frames
+    backstory: >
+      You're a scene scorer who will help with give scores in various fields based
+      on given stills representing the scene. You will also record the content of
+      the field so scenes that may be low in scores by important to the narrative
+      can be added to the final video. 
 

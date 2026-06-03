@@ -3,7 +3,6 @@ transcription_task:
     Create a detailed transcription of video.
 
     The transcription should include:
-    - who is speaking (if identifiable)
     - description of a sound if noticeable
     - dialogue
     - timestamp of dialogue/sound
@@ -48,3 +47,13 @@ content_planning_task:
   expected_output: >
     List of segments with timestamps that will be included in the final video.
   agent: content_planner
+
+scene_scoring_task:
+  description: >
+    Create a list of scores including motion intensity, emotional intensity and composition quality. 
+    Also create a detailed description of the scenes so downstream agents can
+    reference along with scores which scenes are pivotal in telling the full story
+  expected_output: >
+    List of segments with scores on motion intensity, emotional intensity, composition
+    quality and scene description which is well structured and descriptive 
+  agent: scene_scorer
