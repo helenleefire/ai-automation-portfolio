@@ -1,3 +1,13 @@
+scene_scoring_task:
+  description: >
+    Create a list of scores including motion intensity, emotional intensity and composition quality. 
+    Also create a detailed description of the scenes so downstream agents can
+    reference along with scores which scenes are pivotal in telling the full story
+  expected_output: >
+    List of scenes with scores on motion intensity, emotional intensity, composition
+    quality and scenes description which is well structured and descriptive 
+  agent: scenes_scorer
+
 transcription_task:
   description: >
     Create a detailed transcription of video.
@@ -39,21 +49,12 @@ content_planning_task:
     Create a plan with time stamps of the segments that will be included in the
     final video. Take consideration of which part of the video will hook
     the viewers the most and which style of editing would make sense 
-    for the platform the video will be uploaded. Fit the video within
-    the time limit of platform but don't try to make it as long as possible.
-    Goal of the video should be to be able to catch the attention of the
-    viewers for as long as possible so hititng the time limit will not always
+    for the platform the video will be uploaded using transcript and segment scores in 
+    the master timestamp and also the transcript analysis. 
+    Fit the video within the time limit of platform but don't try to make it 
+    as long as possible. Goal of the video should be to be able to catch the attention 
+    of the viewers for as long as possible so hititng the time limit will not always
     be the best idea. 
   expected_output: >
     List of segments with timestamps that will be included in the final video.
   agent: content_planner
-
-scene_scoring_task:
-  description: >
-    Create a list of scores including motion intensity, emotional intensity and composition quality. 
-    Also create a detailed description of the scenes so downstream agents can
-    reference along with scores which scenes are pivotal in telling the full story
-  expected_output: >
-    List of segments with scores on motion intensity, emotional intensity, composition
-    quality and scene description which is well structured and descriptive 
-  agent: scene_scorer

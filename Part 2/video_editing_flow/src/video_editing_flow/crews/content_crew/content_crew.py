@@ -1,7 +1,7 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
-from tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoreingTool
+from tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoringTool
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -42,6 +42,35 @@ class ContentCrew:
         return Task(
             config= self.tasks_config["transcript_analysis_task"], # type: ignore[index]
         )
+    
+    @agent
+    def Segment_scorer(self) -> Agent:
+        return Agent(
+            config=self.agents_config["Segment_scorer"], # type: ignore[index]
+        )
+
+    @task
+    def Segment_scoring_task(self) -> Task:
+        return Task(
+            config = self.tasks_config["Segment_scoring_task"], # type: ignore[index]
+            tools = [SceneScoringTool],
+            output_pydantic=list[FrameScore]
+        )
+    
+    @agent
+    def master_timestamp_creator(self) -> Agent:
+        return Agent(
+            config=self.agents_config["master_timestamp_creator"], # type: ignore[index]
+        )
+
+    @task
+    def master_timestamp_creation_task(self) -> Task:
+        return Task(
+            config= self.tasks_config["master_timestamp_creation_task"], # type: ignore[index]
+            tools= []
+            output_pydantic=list[]
+        )
+    
 
     @agent
     def content_planner(self) -> Agent:
@@ -55,21 +84,7 @@ class ContentCrew:
             config=self.tasks_config["content_planning_task"], # type: ignore[index]
             output_pydantic=list[SceneChangeTimeStamp]
         )
-    
-    @agent
-    def scene_scorer(self) -> Agent:
-        return Agent(
-            config=self.agents_config["scene_scorer"], # type: ignore[index]
-        )
 
-    @task
-    def scene_scoring_task(self) -> Task:
-        return Task(
-            config = self.tasks_config["scene_scoring_task"], # type: ignore[index]
-            tools = [SceneScoreingTool],
-            output_pydantic=list[FrameScore]
-        )
-    
     @crew
     def crew(self) -> Crew:
         """Creates the Content Crew"""

@@ -1,6 +1,13 @@
-# Transcript Analyst (reads transcript, identifies themes) → 
-# Platform Strategist (decides platform fit) → 
-# Content Planner (outputs structured clip plan with Pydantic)
+scene_scorer:
+  role: >
+    scene scorer
+  goal: >
+    Score the scenes based on extracted frames
+  backstory: >
+    You're a scene scorer who will help with give scores in various fields based
+    on given stills representing the scene. You will also describe the content of
+    the frame so scenes that may be low in motion intensity or composition quality scorer
+    but important to the narrative of the video can be added to the final edited video. 
 
 transcriber:
   role: >
@@ -9,7 +16,7 @@ transcriber:
     Trasncribe the dialogue and sound in a video
   backstory: >
     You're a video transcriber who trascribe the audio of
-    a given video. You know how to create a transcription that 
+    a video. You know how to create a transcription that 
     will be useful when picking the best moments of a video during
     the trimming phase of editing.
 
@@ -35,15 +42,4 @@ content_planner:
     trim it down for different social media platforms. You will create
     a list of time stamps of segments that will be included in the
     final trimmed down video that will be able to stand on its own. 
-  
-  scene_scorer:
-    role: >
-      Scene scorer
-    goal: >
-      Score the scenes based on extracted frames
-    backstory: >
-      You're a scene scorer who will help with give scores in various fields based
-      on given stills representing the scene. You will also record the content of
-      the field so scenes that may be low in scores by important to the narrative
-      can be added to the final video. 
 
