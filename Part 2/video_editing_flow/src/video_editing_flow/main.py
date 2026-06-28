@@ -1,45 +1,63 @@
 #!/usr/bin/env python
 from pathlib import Path
+import os
 
 from pydantic import BaseModel
 
 from crewai.flow import Flow, listen, start
 
 from video_editing_flow.crews.content_crew.content_crew import ContentCrew
+from video_editing_flow.tools.custom_tool import SceneChangeDetectionTool, VideoEditingTool, AudioChunkingTool, TranscriptionTool
 
 
 class ContentState(BaseModel):
     video: str = ""
+    scene_timestamps: list[dict] = []
+    transcriptions: list[dict] = []
+    timestamps: list[dict] = []
     final_post: str = ""
-
 
 class ContentFlow(Flow[ContentState]):
 
     @start()
     def plan_content(self):
-        print("Planning content")
         self.state.video = "/Users/helen/Desktop/ai-automation-portfolio/Part 2/testing/video.mp4"
 
     @listen(plan_content)
-    def generate_content(self):
-        print(f"Generating content")
+    def detect_scenes(self):
+        scenes = SceneChangeDetectionTool()._run(self.state.video)
+        self.state.scene_timestamps = [s.model_dump() for s in scenes]
+
+    @listen(detect_scenes)
+    def transcribe(self):
+        chunks = AudioChunkingTool()._run(
+            video_file_path=self.state.video,
+            scene_timestamps=self.state.scene_timestamps
+        )
+        transcriptions = TranscriptionTool()._run(chunks)
+        self.state.transcriptions = [t.model_dump() for t in transcriptions]
+
+    @listen(transcribe)
+    def generate_content_plan(self):
         result = (
             ContentCrew()
             .crew()
-            .kickoff(inputs={"video": self.state.video})
+            .kickoff(inputs={
+                "video": self.state.video,
+                "scene_timestamps": self.state.scene_timestamps,
+                "transcriptions": self.state.transcriptions,
+            })
         )
-
-        print("Content generated")
-        self.state.final_post = result.raw
-
-    @listen(generate_content)
-    def save_content(self):
-        print("Saving content")
-        output_dir = Path("output")
-        output_dir.mkdir(exist_ok=True)
-        with open(output_dir / "post.md", "w") as f:
-            f.write(self.state.final_post)
-        print("Post saved to output/post.md")
+        self.state.timestamps = [t.model_dump() for t in result.pydantic.timestamps] if result.pydantic else []  # type: ignore[union-attr]
+    
+    @listen(generate_content_plan)
+    def execute_edit(self):
+        output = VideoEditingTool()._run(
+            video_file_path=self.state.video,
+            timestamps=self.state.timestamps,
+            output_path=os.path.abspath("final_output.mp4")
+        )
+        print(f"Final video saved to {output}")
 
 
 def kickoff():

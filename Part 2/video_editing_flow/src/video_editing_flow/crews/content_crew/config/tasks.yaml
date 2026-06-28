@@ -1,63 +1,30 @@
 scene_scoring_task:
   description: >
-    Create a list of scores including motion intensity, emotional intensity and composition quality.
-    Also create a detailed description of the scenes so downstream agents can
-    reference along with scores which scenes are pivotal in telling the full story
+    Score each scene using the scene scoring tool with the following scene timestamps: {scene_timestamps}.
+    Use the exact frame_file_path values from those timestamps — do not guess or make up paths.
+    Create scores for motion intensity, emotional intensity and composition quality.
+    Also create a detailed description of each scene so downstream agents can
+    reference which scenes are pivotal in telling the full story.
   expected_output: >
     List of scenes with scores on motion intensity, emotional intensity, composition
-    quality and scenes description which is well structured and descriptive
+    quality and scenes description which is well structured and descriptive.
   agent: scene_scorer
-
-transcription_task:
-  description: >
-    Transcribe the video at {video}. You must use the tools in this exact order:
-    1. Use the scene change detection tool on the video path to get scene timestamps
-    2. Use the audio chunking tool with the video path and scene timestamps to get audio chunks
-    3. Use the transcription tool with the audio chunks to get the transcription
-
-    The transcription should include:
-    - description of a sound if noticeable
-    - dialogue
-    - timestamp of dialogue/sound
-
-    Make the transcription detailed but don't include details
-    that will not be useful during the video cutting/editing phase.
-  expected_output: >
-    A structured and well defined transcription of given video that
-    will make it easy to decide the best moments to preserve in
-    a final video.
-  agent: transcriber
-
-transcript_analysis_task:
-  description: >
-    Create a detailed analysis of a transcript of a video,
-
-    The analysis should include:
-    - theme of the video
-    - the main characters
-    - description of a key moment
-    - start/end time stamp of key moments occurred
-    - why the key moment is important to the video
-
-    Make the analysis as detailed as possible so in the downstream
-    and find as much key moments from the transcript. downstream
-    agents will be selective about which moments to put in the final videos.
-  expected_output: >
-    A structured report of the theme of the video, the main characters and
-    the key moments in the video with time stamps to support them. 
-  agent: transcript_analyst
 
 content_planning_task:
   description: >
-    Create a plan with time stamps of the segments that will be included in the
-    final video. Take consideration of which part of the video will hook
-    the viewers the most and which style of editing would make sense 
-    for the platform the video will be uploaded using transcript and segment scores in 
-    the master timestamp and also the transcript analysis. 
-    Fit the video within the time limit of platform but don't try to make it 
-    as long as possible. Goal of the video should be to be able to catch the attention 
-    of the viewers for as long as possible so hititng the time limit will not always
-    be the best idea. 
+    Create a plan with timestamps of the segments that will be included in the final video.
+    Use the scene scores from the previous task and the following transcription to inform your decisions: {transcriptions}.
+
+    Take consideration of which part of the video will hook the viewers the most and which
+    style of editing would make sense for the platform the video will be uploaded to.
+    Fit the video within the time limit of the platform but don't try to make it as long
+    as possible. The goal is to catch the attention of viewers for as long as possible.
+
+    IMPORTANT: start_time and end_time must always align exactly with the start and end
+    of a complete sentence from the transcription. Never cut in the middle of a sentence
+    or word. Use the transcription timestamps to ensure every segment begins and ends
+    at a sentence boundary.
   expected_output: >
-    List of segments with timestamps that will be included in the final video.
+    List of segments with timestamps that will be included in the final video,
+    where every start and end time aligns with a sentence boundary from the transcription.
   agent: content_planner

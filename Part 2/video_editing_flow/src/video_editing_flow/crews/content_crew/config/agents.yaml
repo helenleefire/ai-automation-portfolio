@@ -1,36 +1,13 @@
 scene_scorer:
   role: >
-    scene scorer
+    Scene scorer
   goal: >
     Score the scenes based on extracted frames
   backstory: >
     You're a scene scorer who will help with give scores in various fields based
     on given stills representing the scene. You will also describe the content of
-    the frame so scenes that may be low in motion intensity or composition quality scorer
-    but important to the narrative of the video can be added to the final edited video. 
-
-transcriber:
-  role: >
-    Video transcriber
-  goal: >
-    Trasncribe the dialogue and sound in a video
-  backstory: >
-    You're a video transcriber who trascribe the audio of
-    a video. You know how to create a transcription that 
-    will be useful when picking the best moments of a video during
-    the trimming phase of editing.
-
-transcript_analyst:
-  role: >
-    Trascript analyst
-  goal: >
-    Analyze the transcript of video to be edited
-  backstory: >
-    You're a video transcript analyst who analyze the content of the
-    video by reviewing its transcript. You will identify the themes or
-    the subject of the video, the main characters if there is any and key
-    moments in the video, all supported by time stamps so once editing starts,
-    we know exactly which moments to leave in the final video. 
+    the frame so scenes that may be low in motion intensity or composition quality
+    but important to the narrative of the video can be added to the final edited video.
 
 content_planner:
   role: >
@@ -38,8 +15,7 @@ content_planner:
   goal: >
     Plan the content of the video
   backstory: >
-    You're a content planner who selects the key moments of a video to 
+    You're a content planner who selects the key moments of a video to
     trim it down for different social media platforms. You will create
     a list of time stamps of segments that will be included in the
-    final trimmed down video that will be able to stand on its own. 
-
+    final trimmed down video that will be able to stand on its own.

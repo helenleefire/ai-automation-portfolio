@@ -23,18 +23,20 @@ class FrameScore(TimeStamp):
     composition_quality: int = Field(..., description="composition quality scored from 1 to 5 compared to other stills")
     scene_description: str = Field(..., description="description of what is happening on still to be referenced along with various frame scores")
 
-class AudioChunk(BaseModel):
-    start_time: float = Field(..., description="start time of audio chunk in the video")
-    end_time: float = Field(..., description="end time of audio chunk in the video")
+class AudioChunk(TimeStamp):
     file_path: str = Field(..., description="file path of extracted audio chunk")
 
 class AudioChunkingToolInput(BaseModel):
     video_file_path: str = Field(..., description="path to video file")
     scene_timestamps: list[SceneChangeTimeStamp] = Field(..., description="scene change timestamps")
 
-class MasterTimeStamp(FrameScore):
-    """Schema to be used by ContentPlanningTool"""
-    transcription: str = Field(..., description="raw text value of transcription")
+class ScoredScenes(BaseModel):
+    """Schema to be used by scene_scoring_task"""
+    scenes: list[FrameScore] = Field(..., description="list of scored scenes with timestamps")
+
+class ContentPlan(BaseModel):
+    """Schema to be used by content_planning_task"""
+    timestamps: list[TimeStamp] = Field(..., description="list of start/end timestamps of segments to include in the final video")
 
 class SceneScoringTool(BaseTool):
     name: str = "scene scoring tool"
@@ -68,7 +70,7 @@ class SceneScoringTool(BaseTool):
             client = instructor.from_anthropic(anthropic.Anthropic())
 
             response = client.messages.create(
-                max_tokens= 500,
+                max_tokens=2048,
                 model="claude-sonnet-4-6",
                 response_model = list[FrameScore],
                 messages= [
@@ -104,13 +106,22 @@ class SceneChangeDetectionTool(BaseTool):
 
         timestamps = [float(t) for t in re.findall(r"pts_time:([\d.]+)", result.stderr)]
 
+        if timestamps and timestamps[0] > 0:
+            first_frame = os.path.join(frames_dir, "frame_0000.jpg")
+            subprocess.run([
+                "ffmpeg", "-i", video_file_path,
+                "-ss", "0", "-vframes", "1",
+                first_frame
+            ], capture_output=True)
+            timestamps = [0.0] + timestamps
+
         scenes = []
         for i, start in enumerate(timestamps):
             end = timestamps[i + 1] if i + 1 < len(timestamps) else duration
             scenes.append(SceneChangeTimeStamp(
                 start_time=start,
                 end_time=end,
-                frame_file_path=os.path.join(frames_dir, f"frame_{i + 1:04d}.jpg")
+                frame_file_path=os.path.join(frames_dir, f"frame_{i:04d}.jpg")
             ))
 
         return scenes
@@ -174,6 +185,15 @@ class TranscriptionTool(BaseTool):
 
         return transcriptions
 
+
+class MasterTimeStamp(FrameScore):
+    """Schema to be used by ContentPlanningTool"""
+    transcription: str = Field(..., description="raw text value of transcription")
+
+class MasterTimeline(BaseModel):
+    """Schema to be used by timeline_merge_task"""
+    timeline: list[MasterTimeStamp] = Field(..., description="merged timeline of scored scenes with transcriptions")
+
 class TimelineMergeToolInput(BaseModel):
     frame_scores: list[FrameScore] = Field(..., description="scored frames with timestamps")
     transcriptions: list[TranscriptionWithTimeStamp] = Field(..., description="transcriptions with timestamps")
@@ -184,6 +204,8 @@ class TimelineMergeTool(BaseTool):
     args_schema: Type[BaseModel] = TimelineMergeToolInput
 
     def _run(self, frame_scores: list[FrameScore], transcriptions: list[TranscriptionWithTimeStamp]) -> list[MasterTimeStamp]:
+        frame_scores = [FrameScore(**f) if isinstance(f, dict) else f for f in frame_scores]
+        transcriptions = [TranscriptionWithTimeStamp(**t) if isinstance(t, dict) else t for t in transcriptions]
         master_timeline = []
 
         for frame in frame_scores:
@@ -202,3 +224,45 @@ class TimelineMergeTool(BaseTool):
             ))
 
         return master_timeline
+
+
+class VideoEditingToolInput(BaseModel):
+    video_file_path: str = Field(..., description="path to the source video file")
+    timestamps: list[TimeStamp] = Field(..., description="list of start/end timestamps to cut and stitch")
+    output_path: str = Field(..., description="path for the final output video")
+
+class VideoEditingTool(BaseTool):
+    name: str = "Video editing tool"
+    description: str = "Cuts the source video at the given timestamps and stitches the segments into a final output video"
+    args_schema: Type[BaseModel] = VideoEditingToolInput
+
+    def _run(self, video_file_path: str, timestamps: list[TimeStamp], output_path: str) -> str:
+        timestamps = [TimeStamp(**t) if isinstance(t, dict) else t for t in timestamps]
+
+        segments_dir = os.path.abspath("segments")
+        os.makedirs(segments_dir, exist_ok=True)
+
+        segment_paths = []
+        for i, ts in enumerate(timestamps):
+            out = os.path.join(segments_dir, f"segment_{i+1:04d}.mp4")
+            subprocess.run([
+                "ffmpeg", "-y", "-i", video_file_path,
+                "-ss", str(ts.start_time),
+                "-to", str(ts.end_time),
+                "-c:v", "libx264", "-preset", "fast",
+                "-c:a", "aac",
+                out
+            ], capture_output=True)
+            segment_paths.append(out)
+
+        filelist = os.path.join(segments_dir, "filelist.txt")
+        with open(filelist, "w") as f:
+            for path in segment_paths:
+                f.write(f"file '{path}'\n")
+
+        subprocess.run([
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", filelist, "-c", "copy", output_path
+        ], capture_output=True)
+
+        return output_path
