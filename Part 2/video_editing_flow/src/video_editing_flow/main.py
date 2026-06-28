@@ -10,7 +10,7 @@ from video_editing_flow.crews.content_crew.content_crew import ContentCrew
 
 class ContentState(BaseModel):
     video: str = ""
-    final_post: list[str] = []
+    final_post: str = ""
 
 
 class ContentFlow(Flow[ContentState]):
@@ -18,10 +18,7 @@ class ContentFlow(Flow[ContentState]):
     @start()
     def plan_content(self):
         print("Planning content")
-
-        self.state.video = "/Users/helen/Desktop/ai-automation-portfolio/video.mp4"
-
-        print(f"Selected")
+        self.state.video = "/Users/helen/Desktop/ai-automation-portfolio/Part 2/testing/video.mp4"
 
     @listen(plan_content)
     def generate_content(self):
@@ -33,7 +30,7 @@ class ContentFlow(Flow[ContentState]):
         )
 
         print("Content generated")
-        self.state.final_post = result
+        self.state.final_post = result.raw
 
     @listen(generate_content)
     def save_content(self):

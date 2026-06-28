@@ -1,16 +1,19 @@
 scene_scoring_task:
   description: >
-    Create a list of scores including motion intensity, emotional intensity and composition quality. 
+    Create a list of scores including motion intensity, emotional intensity and composition quality.
     Also create a detailed description of the scenes so downstream agents can
     reference along with scores which scenes are pivotal in telling the full story
   expected_output: >
     List of scenes with scores on motion intensity, emotional intensity, composition
-    quality and scenes description which is well structured and descriptive 
+    quality and scenes description which is well structured and descriptive
   agent: scene_scorer
 
 transcription_task:
   description: >
-    Create a detailed transcription of video.
+    Transcribe the video at {video}. You must use the tools in this exact order:
+    1. Use the scene change detection tool on the video path to get scene timestamps
+    2. Use the audio chunking tool with the video path and scene timestamps to get audio chunks
+    3. Use the transcription tool with the audio chunks to get the transcription
 
     The transcription should include:
     - description of a sound if noticeable
@@ -18,10 +21,10 @@ transcription_task:
     - timestamp of dialogue/sound
 
     Make the transcription detailed but don't include details
-    that will not be useful during the video cutting/editng phase.
+    that will not be useful during the video cutting/editing phase.
   expected_output: >
-    A structured and well defined transcription of given video that 
-    will make it easy to decide the best moments to preserve in 
+    A structured and well defined transcription of given video that
+    will make it easy to decide the best moments to preserve in
     a final video.
   agent: transcriber
 

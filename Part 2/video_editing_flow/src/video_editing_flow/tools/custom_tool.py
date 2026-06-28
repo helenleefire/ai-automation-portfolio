@@ -41,8 +41,9 @@ class SceneScoringTool(BaseTool):
     description: str = "This tool should be used to score scenes from looking at still representing them"
     
     def _run(self, scene_change_time_stamps: list[SceneChangeTimeStamp]) -> list[FrameScore]:
+        scene_change_time_stamps = [SceneChangeTimeStamp(**s) if isinstance(s, dict) else s for s in scene_change_time_stamps]
         return asyncio.run(self._arun(scene_change_time_stamps))
-    
+
     async def _arun(self, scene_change_time_stamps: list[SceneChangeTimeStamp]) -> list[FrameScore]:
         sem = asyncio.Semaphore(3)
         chunks = [
@@ -83,7 +84,8 @@ class SceneChangeDetectionTool(BaseTool):
     name: str = "scene change detection tool"
     description: str = "This tool should be used to extract all of the scene changes which will be used to find the most visually significant frames"
     def _run(self, video_file_path: str) -> list[SceneChangeTimeStamp]:
-        os.makedirs("frames", exist_ok=True)
+        frames_dir = os.path.abspath("frames")
+        os.makedirs(frames_dir, exist_ok=True)
 
         duration_result = subprocess.run([
             "ffprobe", "-v", "error",
@@ -93,13 +95,13 @@ class SceneChangeDetectionTool(BaseTool):
         ], capture_output=True, text=True)
         duration = float(duration_result.stdout.strip())
 
-        result = subprocess.run([ 
+        result = subprocess.run([
             "ffmpeg", "-i", video_file_path,
             "-vf", "select=gt(scene\\,0.3),showinfo",
             "-vsync", "vfr",
-            "frames/frame_%04d.jpg"
+            os.path.join(frames_dir, "frame_%04d.jpg")
         ], capture_output=True, text=True)
-    
+
         timestamps = [float(t) for t in re.findall(r"pts_time:([\d.]+)", result.stderr)]
 
         scenes = []
@@ -108,7 +110,7 @@ class SceneChangeDetectionTool(BaseTool):
             scenes.append(SceneChangeTimeStamp(
                 start_time=start,
                 end_time=end,
-                frame_file_path=f"frames/frame_{i + 1:04d}.jpg"
+                frame_file_path=os.path.join(frames_dir, f"frame_{i + 1:04d}.jpg")
             ))
 
         return scenes
@@ -119,13 +121,16 @@ class AudioChunkingTool(BaseTool):
     args_schema: Type[BaseModel] = AudioChunkingToolInput
 
     def _run(self, video_file_path: str, scene_timestamps: list[SceneChangeTimeStamp]) -> list[AudioChunk]:
-        os.makedirs("audio_chunks", exist_ok=True)
+        audio_dir = os.path.abspath("audio_chunks")
+        os.makedirs(audio_dir, exist_ok=True)
+
+        scenes = [SceneChangeTimeStamp(**s) if isinstance(s, dict) else s for s in scene_timestamps]
 
         chunks = []
-        current_start = scene_timestamps[0].start_time
-        current_end = scene_timestamps[0].end_time
+        current_start = scenes[0].start_time
+        current_end = scenes[0].end_time
 
-        for scene in scene_timestamps[1:]:
+        for scene in scenes[1:]:
             if current_end - current_start < 5:
                 current_end = scene.end_time
             else:
@@ -137,7 +142,7 @@ class AudioChunkingTool(BaseTool):
 
         audio_chunks = []
         for i, (start, end) in enumerate(chunks):
-            file_path = f"audio_chunks/chunk_{i + 1:04d}.wav"
+            file_path = os.path.join(audio_dir, f"chunk_{i + 1:04d}.wav")
             subprocess.run([
                 "ffmpeg", "-i", video_file_path,
                 "-ss", str(start),
@@ -154,7 +159,8 @@ class TranscriptionTool(BaseTool):
     description: str = "This tool should be used to extract the raw string value of the transcription of a video accompanied by start and end time stamps. This should be done considering scene change time stamps for boundaries."
 
     def _run(self, audio_chunks: list[AudioChunk]) -> list[TranscriptionWithTimeStamp]:
-        model = WhisperModel("base", device="cpu")
+        audio_chunks = [AudioChunk(**c) if isinstance(c, dict) else c for c in audio_chunks]
+        model = WhisperModel("base", device="cpu", compute_type="float32")
         transcriptions = []
 
         for chunk in audio_chunks:

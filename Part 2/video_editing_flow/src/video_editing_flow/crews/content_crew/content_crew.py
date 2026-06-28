@@ -1,7 +1,7 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
-from video_editing_flow.tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoringTool
+from video_editing_flow.tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoringTool, SceneChangeDetectionTool, AudioChunkingTool
 
 llm = LLM(model="anthropic/claude-sonnet-4-6")
 
@@ -30,7 +30,7 @@ class ContentCrew:
     @task
     def transcription_task(self) -> Task:
         return Task(
-            tools=[TranscriptionTool()],
+            tools=[SceneChangeDetectionTool(), AudioChunkingTool(), TranscriptionTool()],
             config=self.tasks_config["transcription_task"],  # type: ignore[index]
         )
     
@@ -59,7 +59,7 @@ class ContentCrew:
         return Task(
             config = self.tasks_config["scene_scoring_task"], # type: ignore[index]
             tools = [SceneScoringTool()],
-            output_pydantic=list[FrameScore]
+output_pydantic=list[FrameScore]
         )
 
     @agent
@@ -83,5 +83,5 @@ class ContentCrew:
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=False,
+            verbose=True,
         )
