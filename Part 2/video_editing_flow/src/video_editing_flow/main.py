@@ -9,37 +9,31 @@ from video_editing_flow.crews.content_crew.content_crew import ContentCrew
 
 
 class ContentState(BaseModel):
-    topic: str = ""
-    outline: str = ""
-    draft: str = ""
-    final_post: str = ""
+    video: str = ""
+    final_post: list[str] = []
 
 
 class ContentFlow(Flow[ContentState]):
 
     @start()
-    def plan_content(self, crewai_trigger_payload: dict = None):
+    def plan_content(self):
         print("Planning content")
 
-        if crewai_trigger_payload:
-            self.state.topic = crewai_trigger_payload.get("topic", "AI Agents")
-            print(f"Using trigger payload: {crewai_trigger_payload}")
-        else:
-            self.state.topic = "AI Agents"
+        self.state.video = "/Users/helen/Desktop/ai-automation-portfolio/video.mp4"
 
-        print(f"Topic: {self.state.topic}")
+        print(f"Selected")
 
     @listen(plan_content)
     def generate_content(self):
-        print(f"Generating content on: {self.state.topic}")
+        print(f"Generating content")
         result = (
             ContentCrew()
             .crew()
-            .kickoff(inputs={"topic": self.state.topic})
+            .kickoff(inputs={"video": self.state.video})
         )
 
         print("Content generated")
-        self.state.final_post = result.raw
+        self.state.final_post = result
 
     @listen(generate_content)
     def save_content(self):

@@ -6,7 +6,7 @@ scene_scoring_task:
   expected_output: >
     List of scenes with scores on motion intensity, emotional intensity, composition
     quality and scenes description which is well structured and descriptive 
-  agent: scenes_scorer
+  agent: scene_scorer
 
 transcription_task:
   description: >

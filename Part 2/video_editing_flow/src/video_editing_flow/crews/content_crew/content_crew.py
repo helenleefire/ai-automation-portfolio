@@ -1,7 +1,9 @@
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task, LLM
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
-from tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoringTool
+from video_editing_flow.tools.custom_tool import TranscriptionTool, SceneChangeTimeStamp, FrameScore, SceneScoringTool
+
+llm = LLM(model="anthropic/claude-sonnet-4-6")
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -19,15 +21,16 @@ class ContentCrew:
     tasks_config = "config/tasks.yaml"
 
     @agent
-    def trasncriber(self) -> Agent:
+    def transcriber(self) -> Agent:
         return Agent(
             config=self.agents_config["transcriber"],  # type: ignore[index]
+            llm=llm,
         )
 
     @task
     def transcription_task(self) -> Task:
         return Task(
-            tools=[TranscriptionTool],
+            tools=[TranscriptionTool()],
             config=self.tasks_config["transcription_task"],  # type: ignore[index]
         )
     
@@ -35,6 +38,7 @@ class ContentCrew:
     def transcript_analyst(self) -> Agent:
         return Agent(
             config=self.agents_config["transcript_analyst"], # type: ignore[index]
+            llm=llm,
         )
     
     @task
@@ -44,38 +48,25 @@ class ContentCrew:
         )
     
     @agent
-    def Segment_scorer(self) -> Agent:
+    def scene_scorer(self) -> Agent:
         return Agent(
-            config=self.agents_config["Segment_scorer"], # type: ignore[index]
+            config=self.agents_config["scene_scorer"], # type: ignore[index]
+            llm=llm,
         )
 
     @task
-    def Segment_scoring_task(self) -> Task:
+    def scene_scoring_task(self) -> Task:
         return Task(
-            config = self.tasks_config["Segment_scoring_task"], # type: ignore[index]
-            tools = [SceneScoringTool],
+            config = self.tasks_config["scene_scoring_task"], # type: ignore[index]
+            tools = [SceneScoringTool()],
             output_pydantic=list[FrameScore]
         )
-    
-    @agent
-    def master_timestamp_creator(self) -> Agent:
-        return Agent(
-            config=self.agents_config["master_timestamp_creator"], # type: ignore[index]
-        )
-
-    @task
-    def master_timestamp_creation_task(self) -> Task:
-        return Task(
-            config= self.tasks_config["master_timestamp_creation_task"], # type: ignore[index]
-            tools= []
-            output_pydantic=list[]
-        )
-    
 
     @agent
     def content_planner(self) -> Agent:
         return Agent(
             config=self.agents_config["content_planner"], # type: ignore[index]
+            llm=llm,
         )
     
     @task

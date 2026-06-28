@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
 from faster_whisper import WhisperModel
+from typing import Type
 import asyncio, anthropic, instructor, base64, subprocess, os, re
 
 class TimeStamp(BaseModel):
@@ -21,6 +22,15 @@ class FrameScore(TimeStamp):
     emotional_intensity: int = Field(..., description="intensity of emotion conveyed scored from 1 to 5 compared to other stills")
     composition_quality: int = Field(..., description="composition quality scored from 1 to 5 compared to other stills")
     scene_description: str = Field(..., description="description of what is happening on still to be referenced along with various frame scores")
+
+class AudioChunk(BaseModel):
+    start_time: float = Field(..., description="start time of audio chunk in the video")
+    end_time: float = Field(..., description="end time of audio chunk in the video")
+    file_path: str = Field(..., description="file path of extracted audio chunk")
+
+class AudioChunkingToolInput(BaseModel):
+    video_file_path: str = Field(..., description="path to video file")
+    scene_timestamps: list[SceneChangeTimeStamp] = Field(..., description="scene change timestamps")
 
 class MasterTimeStamp(FrameScore):
     """Schema to be used by ContentPlanningTool"""
@@ -103,24 +113,86 @@ class SceneChangeDetectionTool(BaseTool):
 
         return scenes
 
-# finish writing this function
 class AudioChunkingTool(BaseTool):
     name: str = "Tool to extract audio from video and chunk them referencing the scene timeline"
     description: str = "This tool will be used before transcription to help with merging of transcription timeline with scene change timeline"
+    args_schema: Type[BaseModel] = AudioChunkingToolInput
 
-# rewrite this so it accepts list of audio files and create unified timeline
+    def _run(self, video_file_path: str, scene_timestamps: list[SceneChangeTimeStamp]) -> list[AudioChunk]:
+        os.makedirs("audio_chunks", exist_ok=True)
+
+        chunks = []
+        current_start = scene_timestamps[0].start_time
+        current_end = scene_timestamps[0].end_time
+
+        for scene in scene_timestamps[1:]:
+            if current_end - current_start < 5:
+                current_end = scene.end_time
+            else:
+                chunks.append((current_start, current_end))
+                current_start = scene.start_time
+                current_end = scene.end_time
+
+        chunks.append((current_start, current_end))
+
+        audio_chunks = []
+        for i, (start, end) in enumerate(chunks):
+            file_path = f"audio_chunks/chunk_{i + 1:04d}.wav"
+            subprocess.run([
+                "ffmpeg", "-i", video_file_path,
+                "-ss", str(start),
+                "-to", str(end),
+                "-vn", "-acodec", "pcm_s16le", "-ar", "16000",
+                file_path
+            ], capture_output=True)
+            audio_chunks.append(AudioChunk(start_time=start, end_time=end, file_path=file_path))
+
+        return audio_chunks
+
 class TranscriptionTool(BaseTool):
     name: str = "Transcription tool"
     description: str = "This tool should be used to extract the raw string value of the transcription of a video accompanied by start and end time stamps. This should be done considering scene change time stamps for boundaries."
-    def _run(self, video_file_path: str) -> list[TranscriptionWithTimeStamp]:
-        model = WhisperModel("base", device="cpu")
-        scenes, info = model.transcribe(video_file_path)
-        transcription = []
-        for scene in scenes:
-            transcription.append(TranscriptionWithTimeStamp(start_time=scene.start, end_time=scene.end, transcription=scene.text))
-        return transcription
 
-# finish writing this function
+    def _run(self, audio_chunks: list[AudioChunk]) -> list[TranscriptionWithTimeStamp]:
+        model = WhisperModel("base", device="cpu")
+        transcriptions = []
+
+        for chunk in audio_chunks:
+            segments, _ = model.transcribe(chunk.file_path)
+            for segment in segments:
+                transcriptions.append(TranscriptionWithTimeStamp(
+                    start_time=chunk.start_time + segment.start,
+                    end_time=chunk.start_time + segment.end,
+                    transcription=segment.text
+                ))
+
+        return transcriptions
+
+class TimelineMergeToolInput(BaseModel):
+    frame_scores: list[FrameScore] = Field(..., description="scored frames with timestamps")
+    transcriptions: list[TranscriptionWithTimeStamp] = Field(..., description="transcriptions with timestamps")
+
 class TimelineMergeTool(BaseTool):
     name: str = "Tool to merge transcription and scene time stamps"
     description: str = "This tool should be used to create the master time line to be used by content planner agent"
+    args_schema: Type[BaseModel] = TimelineMergeToolInput
+
+    def _run(self, frame_scores: list[FrameScore], transcriptions: list[TranscriptionWithTimeStamp]) -> list[MasterTimeStamp]:
+        master_timeline = []
+
+        for frame in frame_scores:
+            overlapping = [
+                t.transcription for t in transcriptions
+                if t.start_time < frame.end_time and t.end_time > frame.start_time
+            ]
+            master_timeline.append(MasterTimeStamp(
+                start_time=frame.start_time,
+                end_time=frame.end_time,
+                motion_intensity=frame.motion_intensity,
+                emotional_intensity=frame.emotional_intensity,
+                composition_quality=frame.composition_quality,
+                scene_description=frame.scene_description,
+                transcription=" ".join(overlapping)
+            ))
+
+        return master_timeline
