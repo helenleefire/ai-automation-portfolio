@@ -1,30 +1,35 @@
-scene_scoring_task:
+content_planning_task_audio_driven:
   description: >
-    Score each scene using the scene scoring tool with the following scene timestamps: {scene_timestamps}.
-    Use the exact frame_file_path values from those timestamps — do not guess or make up paths.
-    Create scores for motion intensity, emotional intensity and composition quality.
-    Also create a detailed description of each scene so downstream agents can
-    reference which scenes are pivotal in telling the full story.
-  expected_output: >
-    List of scenes with scores on motion intensity, emotional intensity, composition
-    quality and scenes description which is well structured and descriptive.
-  agent: scene_scorer
+    This video is AUDIO-DRIVEN. The narrative is carried by dialogue and speech.
+    You are given a master timeline where each entry contains a scene's start_time,
+    end_time, visual scores (motion_intensity, emotional_intensity, composition_quality),
+    scene_description, and overlapping transcription: {master_timeline}
 
-content_planning_task:
+    Prioritize keeping complete, coherent spoken segments. Select entries whose
+    transcription contains impactful, coherent dialogue. Use visual scores only as
+    a tiebreaker between equally strong spoken moments.
+
+    The final video must be at most 60 seconds total. Output only the start_time and
+    end_time for each selected segment. Never cut mid-sentence or mid-word.
+  expected_output: >
+    List of segments with start_time and end_time that preserve complete spoken
+    moments, where every boundary aligns with a sentence end.
+  agent: content_planner
+
+content_planning_task_visual_driven:
   description: >
-    Create a plan with timestamps of the segments that will be included in the final video.
-    Use the scene scores from the previous task and the following transcription to inform your decisions: {transcriptions}.
+    This video is VISUALLY-DRIVEN. Prioritize scene scores when selecting segments.
+    You are given a master timeline where each entry contains a scene's start_time,
+    end_time, visual scores (motion_intensity, emotional_intensity, composition_quality),
+    scene_description, and overlapping transcription: {master_timeline}
 
-    Take consideration of which part of the video will hook the viewers the most and which
-    style of editing would make sense for the platform the video will be uploaded to.
-    Fit the video within the time limit of the platform but don't try to make it as long
-    as possible. The goal is to catch the attention of viewers for as long as possible.
+    Select the most visually impactful segments based on motion_intensity,
+    emotional_intensity, and composition_quality. Use the transcription field to
+    avoid cutting mid-sentence.
 
-    IMPORTANT: start_time and end_time must always align exactly with the start and end
-    of a complete sentence from the transcription. Never cut in the middle of a sentence
-    or word. Use the transcription timestamps to ensure every segment begins and ends
-    at a sentence boundary.
+    The final video must be at most 60 seconds total. Output only the start_time and
+    end_time for each selected segment. Never cut mid-sentence or mid-word.
   expected_output: >
-    List of segments with timestamps that will be included in the final video,
-    where every start and end time aligns with a sentence boundary from the transcription.
+    List of segments with start_time and end_time preserving the most visually
+    impactful moments, where every boundary aligns with a sentence end.
   agent: content_planner

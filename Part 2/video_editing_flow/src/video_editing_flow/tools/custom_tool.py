@@ -23,13 +23,6 @@ class FrameScore(TimeStamp):
     composition_quality: int = Field(..., description="composition quality scored from 1 to 5 compared to other stills")
     scene_description: str = Field(..., description="description of what is happening on still to be referenced along with various frame scores")
 
-class AudioChunk(TimeStamp):
-    file_path: str = Field(..., description="file path of extracted audio chunk")
-
-class AudioChunkingToolInput(BaseModel):
-    video_file_path: str = Field(..., description="path to video file")
-    scene_timestamps: list[SceneChangeTimeStamp] = Field(..., description="scene change timestamps")
-
 class ScoredScenes(BaseModel):
     """Schema to be used by scene_scoring_task"""
     scenes: list[FrameScore] = Field(..., description="list of scored scenes with timestamps")
@@ -126,64 +119,32 @@ class SceneChangeDetectionTool(BaseTool):
 
         return scenes
 
-class AudioChunkingTool(BaseTool):
-    name: str = "Tool to extract audio from video and chunk them referencing the scene timeline"
-    description: str = "This tool will be used before transcription to help with merging of transcription timeline with scene change timeline"
-    args_schema: Type[BaseModel] = AudioChunkingToolInput
-
-    def _run(self, video_file_path: str, scene_timestamps: list[SceneChangeTimeStamp]) -> list[AudioChunk]:
-        audio_dir = os.path.abspath("audio_chunks")
-        os.makedirs(audio_dir, exist_ok=True)
-
-        scenes = [SceneChangeTimeStamp(**s) if isinstance(s, dict) else s for s in scene_timestamps]
-
-        chunks = []
-        current_start = scenes[0].start_time
-        current_end = scenes[0].end_time
-
-        for scene in scenes[1:]:
-            if current_end - current_start < 5:
-                current_end = scene.end_time
-            else:
-                chunks.append((current_start, current_end))
-                current_start = scene.start_time
-                current_end = scene.end_time
-
-        chunks.append((current_start, current_end))
-
-        audio_chunks = []
-        for i, (start, end) in enumerate(chunks):
-            file_path = os.path.join(audio_dir, f"chunk_{i + 1:04d}.wav")
-            subprocess.run([
-                "ffmpeg", "-i", video_file_path,
-                "-ss", str(start),
-                "-to", str(end),
-                "-vn", "-acodec", "pcm_s16le", "-ar", "16000",
-                file_path
-            ], capture_output=True)
-            audio_chunks.append(AudioChunk(start_time=start, end_time=end, file_path=file_path))
-
-        return audio_chunks
-
 class TranscriptionTool(BaseTool):
     name: str = "Transcription tool"
-    description: str = "This tool should be used to extract the raw string value of the transcription of a video accompanied by start and end time stamps. This should be done considering scene change time stamps for boundaries."
+    description: str = "Transcribes a video file and returns segments with timestamps."
 
-    def _run(self, audio_chunks: list[AudioChunk]) -> list[TranscriptionWithTimeStamp]:
-        audio_chunks = [AudioChunk(**c) if isinstance(c, dict) else c for c in audio_chunks]
+    def _run(self, video_file_path: str) -> list[TranscriptionWithTimeStamp]:
+        return self.transcribe_video(video_file_path)
+
+    def transcribe_video(self, video_file_path: str) -> list[TranscriptionWithTimeStamp]:
+        audio_path = os.path.abspath("full_audio.wav")
+        subprocess.run([
+            "ffmpeg", "-y", "-i", video_file_path,
+            "-vn", "-acodec", "pcm_s16le", "-ar", "16000",
+            audio_path
+        ], capture_output=True)
+
         model = WhisperModel("base", device="cpu", compute_type="float32")
-        transcriptions = []
+        segments, _ = model.transcribe(audio_path)
 
-        for chunk in audio_chunks:
-            segments, _ = model.transcribe(chunk.file_path)
-            for segment in segments:
-                transcriptions.append(TranscriptionWithTimeStamp(
-                    start_time=chunk.start_time + segment.start,
-                    end_time=chunk.start_time + segment.end,
-                    transcription=segment.text
-                ))
-
-        return transcriptions
+        return [
+            TranscriptionWithTimeStamp(
+                start_time=segment.start,
+                end_time=segment.end,
+                transcription=segment.text
+            )
+            for segment in segments
+        ]
 
 
 class MasterTimeStamp(FrameScore):
@@ -203,11 +164,16 @@ class TimelineMergeTool(BaseTool):
     description: str = "This tool should be used to create the master time line to be used by content planner agent"
     args_schema: Type[BaseModel] = TimelineMergeToolInput
 
-    def _run(self, frame_scores: list[FrameScore], transcriptions: list[TranscriptionWithTimeStamp]) -> list[MasterTimeStamp]:
+    def _run(self, frame_scores: list[FrameScore], transcriptions: list[TranscriptionWithTimeStamp], strategy: str = "visual") -> list[MasterTimeStamp]:
         frame_scores = [FrameScore(**f) if isinstance(f, dict) else f for f in frame_scores]
         transcriptions = [TranscriptionWithTimeStamp(**t) if isinstance(t, dict) else t for t in transcriptions]
-        master_timeline = []
 
+        if strategy == "audio":
+            return self._merge_by_sentence(frame_scores, transcriptions)
+        return self._merge_by_scene(frame_scores, transcriptions)
+
+    def _merge_by_scene(self, frame_scores: list[FrameScore], transcriptions: list[TranscriptionWithTimeStamp]) -> list[MasterTimeStamp]:
+        master_timeline = []
         for frame in frame_scores:
             overlapping = [
                 t.transcription for t in transcriptions
@@ -222,8 +188,27 @@ class TimelineMergeTool(BaseTool):
                 scene_description=frame.scene_description,
                 transcription=" ".join(overlapping)
             ))
-
         return master_timeline
+
+    def _merge_by_sentence(self, frame_scores: list[FrameScore], transcriptions: list[TranscriptionWithTimeStamp]) -> list[MasterTimeStamp]:
+        result = []
+        for t in transcriptions:
+            overlapping = [f for f in frame_scores if f.start_time < t.end_time and f.end_time > t.start_time]
+            best = (
+                max(overlapping, key=lambda f: min(f.end_time, t.end_time) - max(f.start_time, t.start_time))
+                if overlapping
+                else min(frame_scores, key=lambda f: abs(f.start_time - t.start_time))
+            )
+            result.append(MasterTimeStamp(
+                start_time=t.start_time,
+                end_time=t.end_time,
+                motion_intensity=best.motion_intensity,
+                emotional_intensity=best.emotional_intensity,
+                composition_quality=best.composition_quality,
+                scene_description=best.scene_description,
+                transcription=t.transcription,
+            ))
+        return result
 
 
 class VideoEditingToolInput(BaseModel):
@@ -246,9 +231,10 @@ class VideoEditingTool(BaseTool):
         for i, ts in enumerate(timestamps):
             out = os.path.join(segments_dir, f"segment_{i+1:04d}.mp4")
             subprocess.run([
-                "ffmpeg", "-y", "-i", video_file_path,
+                "ffmpeg", "-y",
                 "-ss", str(ts.start_time),
-                "-to", str(ts.end_time),
+                "-i", video_file_path,
+                "-t", str(ts.end_time - ts.start_time),
                 "-c:v", "libx264", "-preset", "fast",
                 "-c:a", "aac",
                 out
@@ -262,7 +248,10 @@ class VideoEditingTool(BaseTool):
 
         subprocess.run([
             "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-            "-i", filelist, "-c", "copy", output_path
+            "-i", filelist,
+            "-c:v", "libx264", "-preset", "fast",
+            "-c:a", "aac",
+            output_path
         ], capture_output=True)
 
         return output_path
