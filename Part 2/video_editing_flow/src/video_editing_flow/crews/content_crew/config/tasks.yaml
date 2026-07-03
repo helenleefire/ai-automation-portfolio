@@ -5,15 +5,26 @@ content_planning_task_audio_driven:
     end_time, visual scores (motion_intensity, emotional_intensity, composition_quality),
     scene_description, and overlapping transcription: {master_timeline}
 
-    Prioritize keeping complete, coherent spoken segments. Select entries whose
-    transcription contains impactful, coherent dialogue. Use visual scores only as
-    a tiebreaker between equally strong spoken moments.
+    Your goal is to find the most complete, self-contained story in the source material
+    that fits within 60 seconds. A viewer with no prior context must be able to watch
+    it and fully understand what is happening — who, what, and why.
 
-    The final video must be at most 60 seconds total. Output only the start_time and
-    end_time for each selected segment. Never cut mid-sentence or mid-word.
+    How to select:
+    - Identify the strongest narrative arc in the material: a clear hook, the context
+      needed to understand the situation, and a resolution or conclusion.
+    - Include all segments necessary to make that arc coherent. Do not cut setup or
+      context just to be shorter. Use as much of the 60 seconds as the story needs.
+    - Only omit segments that are genuinely redundant or unrelated to the arc.
+
+    SPLITTING RULE: Only create multiple parts if there are two or more clearly
+    distinct, self-contained stories each worth their own video. If in doubt, output
+    one part. Add up the total duration — if 60 seconds or less, output ONE part.
+
+    Never cut mid-sentence or mid-word.
   expected_output: >
-    List of segments with start_time and end_time that preserve complete spoken
-    moments, where every boundary aligns with a sentence end.
+    One or more video parts (usually just one), each containing segments with
+    start_time and end_time that form a complete, self-contained narrative within
+    60 seconds.
   agent: content_planner
 
 content_planning_task_visual_driven:
@@ -23,13 +34,27 @@ content_planning_task_visual_driven:
     end_time, visual scores (motion_intensity, emotional_intensity, composition_quality),
     scene_description, and overlapping transcription: {master_timeline}
 
-    Select the most visually impactful segments based on motion_intensity,
-    emotional_intensity, and composition_quality. Use the transcription field to
-    avoid cutting mid-sentence.
+    Your goal is to find the most complete, self-contained story in the source material
+    that fits within 60 seconds. A viewer with no prior context must be able to watch
+    it and fully understand what is happening — who, what, and why.
 
-    The final video must be at most 60 seconds total. Output only the start_time and
-    end_time for each selected segment. Never cut mid-sentence or mid-word.
+    How to select:
+    - Identify the strongest narrative arc using visual scores as the primary guide.
+      Look for a clear hook, the context needed to understand the situation, and a
+      resolution or conclusion.
+    - Include all segments necessary to make that arc coherent. Use the transcription
+      field to preserve spoken context that helps the viewer understand the visuals.
+      Do not cut setup or context just to be shorter. Use as much of the 60 seconds
+      as the story needs.
+    - Only omit segments that are genuinely redundant or unrelated to the arc.
+
+    SPLITTING RULE: Only create multiple parts if there are two or more clearly
+    distinct, self-contained stories each worth their own video. If in doubt, output
+    one part. Add up the total duration — if 60 seconds or less, output ONE part.
+
+    Never cut mid-sentence or mid-word.
   expected_output: >
-    List of segments with start_time and end_time preserving the most visually
-    impactful moments, where every boundary aligns with a sentence end.
+    One or more video parts (usually just one), each containing segments with
+    start_time and end_time that form a complete, self-contained narrative within
+    60 seconds.
   agent: content_planner

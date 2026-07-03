@@ -27,9 +27,13 @@ class ScoredScenes(BaseModel):
     """Schema to be used by scene_scoring_task"""
     scenes: list[FrameScore] = Field(..., description="list of scored scenes with timestamps")
 
+class VideoPart(BaseModel):
+    """A single video part with its own list of segments"""
+    timestamps: list[TimeStamp] = Field(..., description="list of start/end timestamps of segments in this part")
+
 class ContentPlan(BaseModel):
     """Schema to be used by content_planning_task"""
-    timestamps: list[TimeStamp] = Field(..., description="list of start/end timestamps of segments to include in the final video")
+    parts: list[VideoPart] = Field(..., description="list of video parts, each containing segments that fit within 60 seconds")
 
 class SceneScoringTool(BaseTool):
     name: str = "scene scoring tool"
@@ -79,17 +83,43 @@ class SceneChangeDetectionTool(BaseTool):
     name: str = "scene change detection tool"
     description: str = "This tool should be used to extract all of the scene changes which will be used to find the most visually significant frames"
     def _run(self, video_file_path: str) -> list[SceneChangeTimeStamp]:
-        frames_dir = os.path.abspath("frames")
-        os.makedirs(frames_dir, exist_ok=True)
+        return self.extract_frames(video_file_path)
 
-        duration_result = subprocess.run([
+    def _get_duration(self, video_file_path: str) -> float:
+        result = subprocess.run([
             "ffprobe", "-v", "error",
             "-show_entries", "format=duration",
             "-of", "csv=p=0",
             video_file_path
         ], capture_output=True, text=True)
-        duration = float(duration_result.stdout.strip())
+        return float(result.stdout.strip())
 
+    def _parse_timestamps(self, stderr: str) -> list[float]:
+        return [float(t) for t in re.findall(r"pts_time:([\d.]+)", stderr)]
+
+    def detect_timestamps(self, video_file_path: str) -> list[dict]:
+        duration = self._get_duration(video_file_path)
+        result = subprocess.run([
+            "ffmpeg", "-i", video_file_path,
+            "-vf", "select=gt(scene\\,0.3),showinfo",
+            "-f", "null", "-"
+        ], capture_output=True, text=True)
+
+        timestamps = self._parse_timestamps(result.stderr)
+        if timestamps and timestamps[0] > 0:
+            timestamps = [0.0] + timestamps
+
+        scenes = []
+        for i, start in enumerate(timestamps):
+            end = timestamps[i + 1] if i + 1 < len(timestamps) else duration
+            scenes.append({"start_time": start, "end_time": end})
+        return scenes
+
+    def extract_frames(self, video_file_path: str) -> list[SceneChangeTimeStamp]:
+        frames_dir = os.path.abspath("frames")
+        os.makedirs(frames_dir, exist_ok=True)
+
+        duration = self._get_duration(video_file_path)
         result = subprocess.run([
             "ffmpeg", "-i", video_file_path,
             "-vf", "select=gt(scene\\,0.3),showinfo",
@@ -97,14 +127,12 @@ class SceneChangeDetectionTool(BaseTool):
             os.path.join(frames_dir, "frame_%04d.jpg")
         ], capture_output=True, text=True)
 
-        timestamps = [float(t) for t in re.findall(r"pts_time:([\d.]+)", result.stderr)]
-
+        timestamps = self._parse_timestamps(result.stderr)
         if timestamps and timestamps[0] > 0:
-            first_frame = os.path.join(frames_dir, "frame_0000.jpg")
             subprocess.run([
                 "ffmpeg", "-i", video_file_path,
                 "-ss", "0", "-vframes", "1",
-                first_frame
+                os.path.join(frames_dir, "frame_0000.jpg")
             ], capture_output=True)
             timestamps = [0.0] + timestamps
 
@@ -116,7 +144,6 @@ class SceneChangeDetectionTool(BaseTool):
                 end_time=end,
                 frame_file_path=os.path.join(frames_dir, f"frame_{i:04d}.jpg")
             ))
-
         return scenes
 
 class TranscriptionTool(BaseTool):
@@ -232,9 +259,9 @@ class VideoEditingTool(BaseTool):
             out = os.path.join(segments_dir, f"segment_{i+1:04d}.mp4")
             subprocess.run([
                 "ffmpeg", "-y",
-                "-ss", str(ts.start_time),
                 "-i", video_file_path,
-                "-t", str(ts.end_time - ts.start_time),
+                "-vf", f"trim=start={ts.start_time}:end={ts.end_time},setpts=PTS-STARTPTS",
+                "-af", f"atrim=start={ts.start_time}:end={ts.end_time},asetpts=PTS-STARTPTS",
                 "-c:v", "libx264", "-preset", "fast",
                 "-c:a", "aac",
                 out
